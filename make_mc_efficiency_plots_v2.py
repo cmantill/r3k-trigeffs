@@ -4,7 +4,6 @@ import math
 import re
 import yaml
 import numpy as np
-import pandas as pd
 import pickle as pkl
 from tqdm import tqdm
 from pprint import pprint
@@ -18,9 +17,40 @@ import ROOT
 from plotting_scripts.EfficiencyPlot import EfficiencyPlot
 
 
+def check_parameter_limits(savename, fit_result):
+    if not fit_result:
+        return 
+
+    params_at_limit = []
+    final_params = fit_result.floatParsFinal()
+
+    for i in range(final_params.getSize()):
+        param = final_params.at(i)
+        name = param.GetName()
+        value = param.getVal()
+        min_val = param.getMin()
+        max_val = param.getMax()
+
+        # Use a small tolerance for floating point comparison
+        tolerance = 1e-6
+
+        if abs(value - min_val) < tolerance:
+            params_at_limit.append(f"  - {name} (at MIN limit: {min_val})")
+        
+        if abs(value - max_val) < tolerance:
+            params_at_limit.append(f"  - {name} (at MAX limit: {max_val})")
+
+    if params_at_limit:
+        print(f"--- Boundary Check for: {savename} ---")
+        print("WARNING: The following parameters have final values at their limits:")
+        for param_info in params_at_limit:
+            print(param_info)
+        print(50*'-')
+
+
 def set_verbosity(verb):
     ROOT.gROOT.SetBatch(True)
-    ROOT.gErrorIgnoreLevel = ROOT.kInfo if verb else ROOT.kWarning
+    ROOT.gErrorIgnoreLevel = ROOT.kInfo if verb else ROOT.kError
     ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.INFO if verb else ROOT.RooFit.ERROR)
     printlevel = ROOT.RooFit.PrintLevel(1 if verb else -1)
 
@@ -49,7 +79,7 @@ def estimateBins(h,nbins=5):
     bins = f'{h.GetBinLowEdge(1)}'
     for i in range(1, h.GetXaxis().GetNbins()):
         n_evts += h.GetBinContent(i)
-        if n_evts > frac * tot / nbins: 
+        if n_evts > frac * tot / nbins:
             bins += ', '+str(round(h.GetBinLowEdge(i),2))
             frac += 1
     bins += ', '+str(round(h.GetBinLowEdge(h.GetXaxis().GetNbins()+1),2))
@@ -58,7 +88,8 @@ def estimateBins(h,nbins=5):
 def assign_hist_format(h_name):
     if 'ptbinned' in h_name:
         h_format = {
-            'bins' : np.array([5, 7, 9, 10, 11, 12, 13, 20], dtype=np.double),
+            # 'bins' : np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 20], dtype=np.double),
+            'bins' : np.array([5, 8, 11, 20], dtype=np.double),
             'xlabel' : 'Sublead Electron p_{T} [GeV]',
         }
     elif 'drbinned' in h_name:
@@ -77,68 +108,140 @@ def assign_hist_format(h_name):
     return h_format
 
 
-def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=None, bkg_poly_deg=2, printlevel=ROOT.RooFit.PrintLevel(-1)):
+def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=None, bkg_shape_deg=4, printlevel=ROOT.RooFit.PrintLevel(-1), chi2_threshold=15.0, max_tries=20):
 
     data_yield = h.GetEntries()
     data_min = h.GetXaxis().GetXmin()
     data_max = h.GetXaxis().GetXmax()
 
-    mass = ROOT.RooRealVar('mass', 'mass', 2.5, 3.5)
+    mass = ROOT.RooRealVar('mass', 'mass', 2.5, 3.4)
     data = ROOT.RooDataHist('data', 'data', mass, h)
-    
-    sig_coeff =  ROOT.RooRealVar('sig_coeff', 'sig_coeff', data_yield*.05, 0, data_yield)
-    bkg_coeff =  ROOT.RooRealVar('bkg_coeff', 'bkg_coeff', data_yield*.05, 0, data_yield)
-    if signal_params:
-        dcb_mean =   ROOT.RooRealVar('dcb_mean', 'dcb_mean', signal_params['dcb_mean'], 0.95*signal_params['dcb_mean'], 1.05*signal_params['dcb_mean'])
-        dcb_sigma =  ROOT.RooRealVar('dcb_sigma', 'dcb_sigma', signal_params['dcb_sigma'], 0.95*signal_params['dcb_sigma'], 1.05*signal_params['dcb_sigma'])
-        dcb_alpha1 = ROOT.RooRealVar('dcb_alpha1', 'dcb_alpha1', signal_params['dcb_alpha1'], 0.95*signal_params['dcb_alpha1'], 1.05*signal_params['dcb_alpha1'])
-        dcb_n1 =     ROOT.RooRealVar('dcb_n1', 'dcb_n1', signal_params['dcb_n1'], 0.95*signal_params['dcb_n1'], 1.05*signal_params['dcb_n1'])
-        dcb_alpha2 = ROOT.RooRealVar('dcb_alpha2', 'dcb_alpha2', signal_params['dcb_alpha2'], 0.95*signal_params['dcb_alpha2'], 1.05*signal_params['dcb_alpha2'])
-        dcb_n2 =     ROOT.RooRealVar('dcb_n2', 'dcb_n2', signal_params['dcb_n2'], 0.95*signal_params['dcb_n2'], 1.05*signal_params['dcb_n2'])
-    else:
-        dcb_mean =   ROOT.RooRealVar('dcb_mean', 'dcb_mean', 3.0969, 3.0, 3.2)
-        dcb_sigma =  ROOT.RooRealVar('dcb_sigma', 'dcb_sigma', 0.046, 0.001, 10.)
-        dcb_alpha1 = ROOT.RooRealVar('dcb_alpha1', 'dcb_alpha1', 1, 0.001, 5.)
-        dcb_n1 =     ROOT.RooRealVar('dcb_n1', 'dcb_n1', 2., .01, 10.)
-        dcb_alpha2 = ROOT.RooRealVar('dcb_alpha2', 'dcb_alpha2', 1, 0.001, 5.)
-        dcb_n2 =     ROOT.RooRealVar('dcb_n2', 'dcb_n2', 2., .01, 10.)
 
-    poly_pars = [ROOT.RooRealVar(f'poly_a{i}', f'poly_a{i}', *[0, -50,50]) for i in range(bkg_poly_deg)]
-    poly_offset = ROOT.RooRealVar('poly_offset','poly_offset', 3, -10, 10)
-    poly_diff = ROOT.RooFormulaVar('diff','mass-poly_offset', ROOT.RooArgList(mass, poly_offset))
+    sig_coeff =  ROOT.RooRealVar('sig_coeff', 'sig_coeff', data_yield*.03, 0, data_yield)
+    cb_mean =   ROOT.RooRealVar('cb_mean', 'cb_mean', 3.0969)
+    cb_sigma =  ROOT.RooRealVar('cb_sigma', 'cb_sigma', 0.046, 0.02, 0.1)
+    cb_alpha = ROOT.RooRealVar('cb_alpha', 'cb_alpha', 2.0, 0.3, 10.)
+    cb_n =     ROOT.RooRealVar('cb_n', 'cb_n', 8.0, 1.01, 40.)
+    sig_pdf = ROOT.RooCrystalBall('sig_pdf', 'Signal Fit', mass, cb_mean, cb_sigma, cb_alpha, cb_n)
 
-    sig_pdf = ROOT.RooCrystalBall('sig_pdf', 'Signal Fit', mass, dcb_mean, dcb_sigma, dcb_alpha1, dcb_n1, dcb_alpha2, dcb_n2)
-    bkg_pdf = ROOT.RooPolynomial('bkg_pdf', 'Background Fit', poly_diff, ROOT.RooArgList(*poly_pars))
-    
-    if signal_only: 
+    bkg_coeff =  ROOT.RooRealVar('bkg_coeff', 'bkg_coeff', data_yield*.97, 0, data_yield)
+    bern_pars = [ROOT.RooRealVar(f'bern_p{i}', f'bern_p{i}', 1, 0, 10) for i in range(bkg_shape_deg)]
+    bkg_pdf = ROOT.RooBernstein('bkg_pdf', 'Background Fit', mass, ROOT.RooArgList(*bern_pars))
+
+    # Tail constraint
+    n_central_val = ROOT.RooConstVar("n_central_val", "n_central_val", 10.0) # Target a large n
+    n_sigma_val = ROOT.RooConstVar("n_sigma_val", "n_sigma_val", 3.0)   # With a reasonably strong pull
+    n_constraint_pdf = ROOT.RooGaussian(
+        "n_constraint_pdf", "Constraint on cb_n",
+        cb_n, n_central_val, n_sigma_val
+    )
+
+    if signal_only:
         fit_model = ROOT.RooAddPdf('fit_model', 'Signal Fit', ROOT.RooArgList(sig_pdf), ROOT.RooArgList(sig_coeff))
-    else: 
+    else:
         fit_model = ROOT.RooAddPdf('fit_model', 'Signal + Background Fit', ROOT.RooArgList(sig_pdf, bkg_pdf), ROOT.RooArgList(sig_coeff, bkg_coeff))
 
-    fit_result = fit_model.fitTo(data, ROOT.RooFit.Save(True), ROOT.RooFit.SumW2Error(True), printlevel)
 
+    fit_result = None
+    chi2 = float('inf')
+    attempt = 0
+    sig_unc_ratio = 1
+
+    # while (math.isnan(chi2) or chi2 > chi2_threshold or sig_unc_ratio > 1) and attempt < max_tries:
+    #     if fit_result:
+    #         fit_result.Delete()
+
+    #     fit_result = fit_model.fitTo(
+    #         data,
+    #         ROOT.RooFit.Save(True),
+    #         ROOT.RooFit.Minos(True),
+    #         ROOT.RooFit.ExternalConstraints(ROOT.RooArgSet(n_constraint_pdf)),
+    #         printlevel
+    #     )
+    #     sig_unc_ratio = sig_coeff.getError() / sig_coeff.getVal() if sig_coeff.getVal() else 99
+    #     tmp_frame = mass.frame(ROOT.RooFit.Title('tmp'))
+    #     data.plotOn(tmp_frame)
+    #     if signal_only:
+    #         fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
+    #     else:
+    #         fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal()+bkg_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
+
+
+    #     chi2 = tmp_frame.chiSquare('fit_model_Norm[mass]', 'h_data', len(fit_result.floatParsFinal()))
+    #     tmp_frame.Delete()
+
+    #     attempt += 1
+
+    fit_result = None
+    attempt = 0
+    good_fit = False
+
+    while not good_fit and attempt < max_tries:
+        if fit_result:
+            fit_result.Delete()
+
+        fit_result = fit_model.fitTo(
+            data,
+            ROOT.RooFit.Save(True),
+            ROOT.RooFit.Minos(True),
+            ROOT.RooFit.ExternalConstraints(ROOT.RooArgSet(n_constraint_pdf)),
+            printlevel
+        )
+
+        # 🎯 CRITICAL FIX: Check the fit status and covariance quality
+        fit_status = fit_result.status()
+        cov_qual = fit_result.covQual()
+        print(f'AAA: {savename}, {fit_status}, {cov_qual}')
+        if fit_status >= 0 and cov_qual >= 2:
+            # Fit is potentially good, now check chi2 and error
+            sig_unc_ratio = sig_coeff.getError() / sig_coeff.getVal() if sig_coeff.getVal() > 0 else float('inf')
+            
+            tmp_frame = mass.frame(ROOT.RooFit.Title('tmp'))
+            data.plotOn(tmp_frame)
+            if signal_only:
+                fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
+            else:
+                fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal()+bkg_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
+            
+            chi2 = tmp_frame.chiSquare('fit_model_Norm[mass]', 'h_data', len(fit_result.floatParsFinal()))
+            tmp_frame.Delete()
+
+            if not math.isnan(chi2) and chi2 < chi2_threshold and sig_unc_ratio < 1:
+                good_fit = True
+        
+        attempt += 1
+
+    if not good_fit:
+        print(f"WARNING: Fit failed to converge for {savename.stem} after {max_tries} attempts.")
+
+    if attempt >= max_tries:
+        print(f"WARNING: Fit failed to converge for {savename.stem} after {max_tries} attempts.")
+        if get_params:
+            return [None, None, None, None, None] if not signal_only else [None, None, None]
+        return [None, None, None, None] if not signal_only else [None, None]
+
+
+    check_parameter_limits(savename, fit_result)
     out = [sig_coeff.getVal(), sig_coeff.getError()]
     params_output = {
-        'dcb_mean'   : dcb_mean.getVal(),
-        'dcb_sigma'  : dcb_sigma.getVal(),
-        'dcb_alpha1' : dcb_alpha1.getVal(),
-        'dcb_n1'     : dcb_n1.getVal(),
-        'dcb_alpha2' : dcb_alpha2.getVal(),
-        'dcb_n2'     : dcb_n2.getVal(),
+        'cb_mean'   : cb_mean.getVal(),
+        'cb_sigma'  : cb_sigma.getVal(),
+        'cb_alpha' : cb_alpha.getVal(),
+        'cb_n'     : cb_n.getVal(),
     }
 
-    if not signal_only: 
+    if not signal_only:
         out.extend([bkg_coeff.getVal(), bkg_coeff.getError()])
         params_output.update({
-            'poly_offset'  : poly_offset.getVal(),
-            **{i.GetName() : i for i in poly_pars},
+            # **{i.GetName() : i for i in poly_pars},
+            **{i.GetName() : i for i in bern_pars},
         })
-    
+
     out += [params_output] if get_params else []
 
-    frame = mass.frame(ROOT.RooFit.Title(' '))
+    frame = mass.frame(ROOT.RooFit.Title(str(savename.stem)))
     data.plotOn(frame)
-    
+
     if signal_only:
         fit_model.plotOn(frame, ROOT.RooFit.Name(fit_model.GetName()), ROOT.RooFit.LineColor(38), ROOT.RooFit.Normalization(sig_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
         h_pull = frame.pullHist()
@@ -154,8 +257,9 @@ def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=
     frame_pull = mass.frame(ROOT.RooFit.Title(' '))
     frame_pull.addPlotable(h_pull, 'P')
 
-    ndf = frame.GetXaxis().GetNbins() - 2 - len(fit_result.floatParsFinal())
-    chi2 = frame.chiSquare('fit_model', 'h_data', len(fit_result.floatParsFinal()))
+    n_params = len(fit_result.floatParsFinal()) if fit_result else 0
+    chi2 = frame.chiSquare('fit_model', 'h_data', n_params) if not signal_only else frame.chiSquare('fit_model', 'h_data', n_params)
+    # chi2 = frame.chiSquare()
     chi2_text = ROOT.TLatex(0.7, 0.8, '#chi^{{2}}/ndf = {}'.format(round(chi2,1)))
     chi2_text.SetTextSize(0.05)
     chi2_text.SetNDC(ROOT.kTRUE)
@@ -235,181 +339,217 @@ def make_plotlist(cfg):
     data_in_path = Path(cfg.inputs.data_dir).parent / 'test' if cfg.test else Path(cfg.inputs.data_dir)
     mc_in_path = Path(cfg.inputs.mc_dir).parent / 'test' if cfg.test else Path(cfg.inputs.mc_dir)
     for plot_name, plot_dict in cfg.plots.items():
-        if cfg.test and ('test' not in plot_name):
-            continue
-        for trigger in plot_dict.triggers:
-            for var in plot_dict.variables:
-                plots.append(DotDict({
-                    'name'        : '_'.join([plot_name,trigger,f'{var}binned']),
-                    'trigger'     : trigger,
-                    'data_file'   : data_in_path / plot_dict.files.data,
-                    'mc_file'     : mc_in_path / plot_dict.files.mc,
-                    'num_hist'    : cfg.inputs.hist_dir.strip('/')+'_'.join(['/diel_m',trigger,'num',f'{var}binned']),
-                    'denom_hist'  : cfg.inputs.hist_dir.strip('/')+'_'.join(['/diel_m',trigger,'denom',f'{var}binned']),
-                    'output_file' : out_path / Path('_'.join(['eff',trigger,f'{var}binned'])).with_suffix('.pdf'),
-                }))
-    
+        # For new format: triggers is a dict with data_trigger
+        data_trigger = plot_dict.triggers['data_trigger'] if isinstance(plot_dict.triggers, dict) else plot_dict.triggers[0]
+        for var in plot_dict.variables:
+            plots.append(DotDict({
+                'name': '_'.join([plot_name, f'{var}binned']),
+                'data_trigger': data_trigger,
+                'data_file': data_in_path / plot_dict.files.data,
+                'mc_file': mc_in_path / plot_dict.files.mc if hasattr(plot_dict.files, 'mc') else None,
+                'output_file': out_path / Path('_'.join(['eff', data_trigger, f'{var}binned'])).with_suffix('.pdf'),
+                'mc_triggers': plot_dict.mc_triggers if hasattr(plot_dict, 'mc_triggers') else [],
+                'var': var,
+                **assign_hist_format(f'{var}binned'),
+            }))
     return plots
 
-
 def get_hists(cfg):
+    # Only for data, since MC is handled per-path
     hists = []
-    hist_paths = [(cfg.data_file, (cfg.num_hist,cfg.denom_hist)),(cfg.mc_file, (cfg.num_hist,cfg.denom_hist))]
-    for (fname, (num_path, denom_path)) in hist_paths:
+    hist_paths = [(
+        cfg.data_file, 
+        f'hists/diel_m_{cfg.data_trigger}_num_{cfg.var}binned', 
+        f'hists/diel_m_{cfg.data_trigger}_denom_{cfg.var}binned',
+    )]
+    for fname, num_path, denom_path in hist_paths:
         subhists = []
         f = ROOT.TFile(str(fname))
         num_h = f.Get(num_path)
         denom_h = f.Get(denom_path)
         nbins = num_h.GetYaxis().GetNbins()
         for i in range(1, nbins + 1):
-            try: num_bin = num_h.ProjectionX('num_bin',i,i+1)
-            except AttributeError('Cannot Find Numerator Histogram'): continue
-            try: denom_bin = denom_h.ProjectionX('denom_bin',i,i+1)
-            except AttributeError('Cannot Find Denominator Histogram'): continue
-            subhists.append((copy.deepcopy(num_bin),copy.deepcopy(denom_bin)))
+            try:
+                num_bin = num_h.ProjectionX('num_bin', i, i + 1)
+                # print(f'bin {i} num: ',num_bin.GetEntries())
+            except AttributeError:
+                continue
+            try:
+                denom_bin = denom_h.ProjectionX('denom_bin', i, i + 1)
+                # print(f'bin {i} deonom: ',denom_bin.GetEntries())
+            except AttributeError:
+                continue
+            subhists.append((copy.deepcopy(num_bin), copy.deepcopy(denom_bin)))
         hists.append(subhists)
     return hists
 
 def make_eff_plot_dict(cfg):
     plot_list = make_plotlist(cfg)
-
     eff_plot_list = []
     for plot_cfg in plot_list:
-        if cfg.test and ('test' not in plot_cfg.name):
-            continue
-        elif not cfg.test and ('test' in plot_cfg.name):
-            continue
-
         print(f'processing hists for {plot_cfg.name}')
-
         eff_dict = {
-            'name' : plot_cfg.name,
-            'trigger' : plot_cfg.trigger,
-            'output_file' : plot_cfg.output_file,
-            'data_num_yields' : [],
-            'data_denom_yields' : [],
-            'mc_num_yields' : [],
-            'mc_denom_yields' : [],
-            **assign_hist_format(plot_cfg.name),
+            'name': plot_cfg.name,
+            'data_trigger': plot_cfg.data_trigger,
+            'output_file': plot_cfg.output_file,
+            'data_num_yields': [],
+            'data_denom_yields': [],
+            'mc_eff_mixture': [],
+            'mc_triggers': plot_cfg.mc_triggers,
+            'bins': plot_cfg.bins,
+            'xlabel': plot_cfg.xlabel,
         }
-
-        data_hists, mc_hists = get_hists(plot_cfg)
+        # Data
+        data_hists = get_hists(plot_cfg)
         fit_output_file = plot_cfg.output_file.parent / 'fits' / plot_cfg.output_file.name
-        for i, ((data_num_hist, data_denom_hist), (mc_num_hist, mc_denom_hist)) in enumerate(zip(data_hists, mc_hists)):
-            n_num_mc, n_num_mc_err, sig_params = do_fit(
-                mc_num_hist, 
-                signal_only=True, 
-                savename=fit_output_file.with_stem(f'mc_num_fit_{plot_cfg.name}_bin{i}'), 
-                get_params=True,
-                printlevel=cfg.printlevel,
-            )
+        for i, (data_num_hist, data_denom_hist) in enumerate(data_hists[0]):
+            # n_num_data, n_num_data_err, _, _ = do_fit(
+            #     data_num_hist,
+            #     savename=fit_output_file.with_stem(f'data_num_fit_{plot_cfg.name}_bin{i}'),
+            #     printlevel=cfg.printlevel,
+            # )
+            # n_denom_data, n_denom_data_err, _, _ = do_fit(
+            #     data_denom_hist,
+            #     savename=fit_output_file.with_stem(f'data_denom_fit_{plot_cfg.name}_bin{i}'),
+            #     printlevel=cfg.printlevel,
+            # )
+            # eff_dict['data_num_yields'].append((n_num_data, n_num_data_err))
+            # eff_dict['data_denom_yields'].append((n_denom_data, n_denom_data_err))
 
-            n_num_data, n_num_data_err, _, _ = do_fit(
-                data_num_hist, 
-                signal_params=sig_params,
-                savename=fit_output_file.with_stem(f'data_num_fit_{plot_cfg.name}_bin{i}'), 
+            num_results = do_fit(
+                data_num_hist,
+                savename=fit_output_file.with_stem(f'data_num_fit_{plot_cfg.name}_bin{i}'),
                 printlevel=cfg.printlevel,
             )
-        
-            n_denom_mc, n_denom_mc_err, sig_params = do_fit(
-                mc_denom_hist, 
-                signal_only=True, 
-                savename=fit_output_file.with_stem(f'mc_denom_fit_{plot_cfg.name}_bin{i}'), 
-                get_params=True,
-                printlevel=cfg.printlevel,
-            )
+            n_num_data, n_num_data_err = (num_results[0], num_results[1]) if num_results[0] is not None else (None, None)
 
-            n_denom_data, n_denom_data_err, _, _ = do_fit(
-                data_denom_hist, 
-                signal_params=sig_params,
-                savename=fit_output_file.with_stem(f'data_denom_fit_{plot_cfg.name}_bin{i}'), 
+            denom_results = do_fit(
+                data_denom_hist,
+                savename=fit_output_file.with_stem(f'data_denom_fit_{plot_cfg.name}_bin{i}'),
                 printlevel=cfg.printlevel,
             )
-            
+            n_denom_data, n_denom_data_err = (denom_results[0], denom_results[1]) if denom_results[0] is not None else (None, None)
+
             eff_dict['data_num_yields'].append((n_num_data, n_num_data_err))
             eff_dict['data_denom_yields'].append((n_denom_data, n_denom_data_err))
-            eff_dict['mc_num_yields'].append((n_num_mc, n_num_mc_err))
-            eff_dict['mc_denom_yields'].append((n_denom_mc, n_denom_mc_err))
 
+        # if plot_cfg.mc_file and plot_cfg.mc_triggers:
+        #     mc_file = ROOT.TFile(str(plot_cfg.mc_file))
+        #     n_bins = len(eff_dict['bins']) - 1
+        #     mc_path_effs = []
+        #     for mc_trig in plot_cfg.mc_triggers:
+        #         path = mc_trig['path'].strip('"')
+        #         weight = mc_trig['weight']
+        #         num_hist_name = f'hists/diel_m_{path}_num_{plot_cfg.var}binned'
+        #         denom_hist_name = f'hists/diel_m_{path}_denom_{plot_cfg.var}binned'
+        #         num_hist = mc_file.Get(num_hist_name)
+        #         denom_hist = mc_file.Get(denom_hist_name)
+        #         effs = []
+        #         for ibin in range(1, n_bins + 1):
+        #             num_proj = num_hist.ProjectionX('num_bin', ibin, ibin + 1)
+        #             n_num = num_proj.GetEntries()
+        #             n_num_err = math.sqrt(n_num) # num_proj.GetBinError(ibin)
+        #             denom_proj = denom_hist.ProjectionX('denom_bin', ibin, ibin + 1)
+        #             n_denom = denom_proj.GetEntries()
+        #             n_denom_err = math.sqrt(n_denom) # denom_proj.GetBinError(ibin)
+        #             eff = ufloat(n_num, n_num_err) / ufloat(n_denom, n_denom_err) if n_denom > 0 else ufloat(0, 0)
+        #             effs.append((eff, weight))
+        #         mc_path_effs.append(effs)
+
+
+        if plot_cfg.mc_file and plot_cfg.mc_triggers:
+            mc_file = ROOT.TFile(str(plot_cfg.mc_file))
+            n_bins = len(eff_dict['bins']) - 1
+            mc_path_effs = []
+            for mc_trig in plot_cfg.mc_triggers:
+                path = mc_trig['path'].strip('"')
+                weight = mc_trig['weight']
+                num_hist_name = f'hists/diel_m_{path}_num_{plot_cfg.var}binned'
+                denom_hist_name = f'hists/diel_m_{path}_denom_{plot_cfg.var}binned'
+                num_hist = mc_file.Get(num_hist_name)
+                denom_hist = mc_file.Get(denom_hist_name)
+                effs = []
+                for ibin in range(1, n_bins + 1):
+                    num_proj = num_hist.ProjectionX('num_bin', ibin, ibin + 1)
+                    denom_proj = denom_hist.ProjectionX('denom_bin', ibin, ibin + 1)
+                    
+                    if denom_proj.GetEntries() > 0:
+                        eff = ufloat(num_proj.GetEntries(), math.sqrt(num_proj.GetEntries())) / ufloat(denom_proj.GetEntries(), math.sqrt(denom_proj.GetEntries()))
+                    else:
+                        eff = ufloat(0, 0)
+                    effs.append(eff * weight)
+                mc_path_effs.append(effs)
+
+            mc_eff_mixture = []
+            for ibin in range(n_bins):
+                eff_sum = sum(effs[ibin] for effs in mc_path_effs)
+                mc_eff_mixture.append(eff_sum)
+            eff_dict['mc_eff_mixture'] = mc_eff_mixture
         eff_plot_list.append(eff_dict)
 
-    with open('eff_plot_data.pkl', 'wb') as f:
+    with open(Path(cfg.output.output_dir) / 'eff_plot_entries.pkl', 'wb') as f:
         pkl.dump(eff_plot_list, f)
-
+    
     return eff_plot_list
 
 
 def plot_efficiencies(eff_dicts, test=False):
     for d in eff_dicts:
-        
         if test and ('test' not in d['name']):
             continue
         elif not test and ('test' in d['name']):
             continue
 
         bins = d['bins']
- 
         h_num_data = ROOT.TH1F('h_num_data', 'h_num_data', len(bins)-1, bins)
         h_denom_data = ROOT.TH1F('h_denom_data', 'h_denom_data', len(bins)-1, bins)
         h_num_mc = ROOT.TH1F('h_num_mc', 'h_num_mc', len(bins)-1, bins)
         h_denom_mc = ROOT.TH1F('h_denom_mc', 'h_denom_mc', len(bins)-1, bins)
 
+        # Fill data as before
+        for ibin, (data_num, data_denom) in enumerate(zip(d['data_num_yields'], d['data_denom_yields'])):
+            if data_num[0] is not None and data_denom[0] is not None:
+                h_num_data.SetBinContent(ibin+1, data_num[0])
+                h_num_data.SetBinError(ibin+1, data_num[1])
+                h_denom_data.SetBinContent(ibin+1, data_denom[0])
+                h_denom_data.SetBinError(ibin+1, data_denom[1])
 
-        h_num_data_count = ufloat(0,0)
-        h_denom_data_count = ufloat(0,0)
-        h_num_mc_count = ufloat(0,0)
-        h_denom_mc_count = ufloat(0,0)
 
-        zipped_yields = zip(
-            d['data_num_yields'],
-            d['data_denom_yields'],
-            d['mc_num_yields'],
-            d['mc_denom_yields']
-        )
-        for ibin, (data_num, data_denom, mc_num, mc_denom) in enumerate(zipped_yields):
-            if (data_num > data_denom) or (mc_num > mc_denom): 
-                continue
-
-            h_num_data.SetBinContent(ibin+1, data_num[0])
-            h_num_data.SetBinError(ibin+1, data_num[1])
-            h_denom_data.SetBinContent(ibin+1, data_denom[0])
-            h_denom_data.SetBinError(ibin+1, data_denom[1])
-            h_num_mc.SetBinContent(ibin+1, mc_num[0])
-            h_num_mc.SetBinError(ibin+1, mc_num[1])
-            h_denom_mc.SetBinContent(ibin+1, mc_denom[0])
-            h_denom_mc.SetBinError(ibin+1, mc_denom[1])
-
-            h_num_data_count += ufloat(*data_num)
-            h_denom_data_count += ufloat(*data_denom)
-            h_num_mc_count += ufloat(*mc_num)
-            h_denom_mc_count += ufloat(*mc_denom)
-        
-        data_incl_eff = h_num_data_count / h_denom_data_count
-        mc_incl_eff = h_num_mc_count / h_denom_mc_count
-        # print(d['name'])
-        # print(f'Inclusive Data Eff. = {data_incl_eff}')
-        # print(f'Inclusive MC Eff. = {mc_incl_eff}')
-        # print(f'Data/MC Eff Ratio = {data_incl_eff / mc_incl_eff}')
+        # MC: use mixture if present
+        if 'mc_eff_mixture' in d and d['mc_eff_mixture']:
+            for ibin, eff in enumerate(d['mc_eff_mixture']):
+                # For TEfficiency, set numerator = eff * denom, error propagation is handled by ufloat
+                denom = 1.0  # or set to 1 for all bins, since TEfficiency cares about ratio
+                num = eff.n
+                err = eff.s
+                h_num_mc.SetBinContent(ibin+1, num)
+                h_num_mc.SetBinError(ibin+1, err)
+                h_denom_mc.SetBinContent(ibin+1, denom)
+                h_denom_mc.SetBinError(ibin+1, 0)
+        else:
+            for ibin, (mc_num, mc_denom) in enumerate(zip(d['mc_num_yields'], d['mc_denom_yields'])):
+                h_num_mc.SetBinContent(ibin+1, mc_num[0])
+                h_num_mc.SetBinError(ibin+1, mc_num[1])
+                h_denom_mc.SetBinContent(ibin+1, mc_denom[0])
+                h_denom_mc.SetBinError(ibin+1, mc_denom[1])
 
         eff_data = ROOT.TEfficiency(h_num_data, h_denom_data)
         eff_data.SetStatisticOption(ROOT.TEfficiency.kBBayesian)
-
         eff_mc = ROOT.TEfficiency(h_num_mc, h_denom_mc)
-        eff_mc.SetStatisticOption(ROOT.TEfficiency.kBBayesian)
+        eff_mc.SetStatisticOption(ROOT.TEfficiency.kFNormal)
 
         eff_plot = EfficiencyPlot(init_params={
-            'title_string' : f' ;{d["xlabel"]};Efficiency', 
-            'xrange' : (bins[0],bins[-1]),
-            'yrange' : (0.,1.1),
-            'leg_scale' : .65,
-            'leg_header' : d['trigger'],
-            #'rrange' : (.7,1.3) if justIncl else ((0,2) if 'dr' in key else (.2,3)),
+            'title_string': ' ;' + d["xlabel"] + ';Efficiency',
+            'xrange': (bins[0], bins[-1]),
+            'yrange': (0., 1.1),
+            'leg_scale': .65,
+            'leg_header': '',
         })
 
         eff_plot.plotEfficiencies(
             eff_data,
             eff_mc,
-            ratio=True, 
+            ratio=True,
             h1_title='ParkingDoubleMuonLowMass 2022 Data',
             h2_title='B^{+} #rightarrow J/#psi K^{+} MC',
             save=str(d['output_file']),
@@ -418,43 +558,55 @@ def plot_efficiencies(eff_dicts, test=False):
 
 
 def make_sf_json(cfg, eff_dicts):
-    pprint(eff_dicts)
     outputs = {}
     for eff_dict in eff_dicts:
         matches = list(re.finditer(r'_([^_]+)binned(?=_|$)', eff_dict['name']))
         if not matches:
             raise ValueError(f"Could not find binvar in {eff_dict['name']}")
+
         binvar = matches[-1].group(1)
+        # data_num = [ufloat(val, unc) for val, unc in eff_dict['data_num_yields']]
+        # data_denom = [ufloat(val, unc) for val, unc in eff_dict['data_denom_yields']]
+        # data_ratio = [n / d if d.n != 0 else ufloat(0, 0) for n, d in zip(data_num, data_denom)]
+        # mc_ratio = eff_dict['mc_eff_mixture']
+        # sfs = [d / m if m.n != 0 else ufloat(0, 0) for d, m in zip(data_ratio, mc_ratio)]
 
-        data_num = [ufloat(val, unc) for val, unc in eff_dict['data_num_yields']]
-        data_denom = [ufloat(val, unc) for val, unc in eff_dict['data_denom_yields']]
-        mc_num = [ufloat(val, unc) for val, unc in eff_dict['mc_num_yields']]
-        mc_denom = [ufloat(val, unc) for val, unc in eff_dict['mc_denom_yields']]
+        # sfs = [(round(r.n,3), round(r.s,3)) for r in sfs]
+        # data_ratio = [(round(r.n,3), round(r.s,3)) for r in data_ratio]
+        # mc_ratio = [(round(r.n,3), round(r.s,3)) for r in mc_ratio]
 
-        data_ratio = [n / d if d.n != 0 else ufloat(0, 0) for n, d in zip(data_num, data_denom)]
-        mc_ratio = [n / d if d.n != 0 else ufloat(0, 0) for n, d in zip(mc_num, mc_denom)]
+        # output = {
+        #     'binvar'    : binvar,
+        #     'bins'      : list(eff_dict['bins'])[:-1],
+        #     'sfs'       : sfs,
+        #     'data_effs' : data_ratio,
+        #     'mc_effs'   : mc_ratio,
+        # }
 
-        sfs = [d / m if m.n != 0 else ufloat(0, 0) for d, m in zip(data_ratio, mc_ratio)]
+        # outputs[eff_dict['name']] = outputs.get(eff_dict['name'], copy.deepcopy(output))
 
-        sfs = [(round(r.n,3), round(r.s,3)) for r in sfs]
-        data_ratio = [(round(r.n,3), round(r.s,3)) for r in data_ratio]
-        mc_ratio = [(round(r.n,3), round(r.s,3)) for r in mc_ratio]
+        data_num = [ufloat(val, unc) if val is not None else None for val, unc in eff_dict['data_num_yields']]
+        data_denom = [ufloat(val, unc) if val is not None else None for val, unc in eff_dict['data_denom_yields']]
+
+        # Propagate None through ratios
+        data_ratio = [(n / d) if (n is not None and d is not None and d.n != 0) else None for n, d in zip(data_num, data_denom)]
+        mc_ratio = eff_dict['mc_eff_mixture']
+        sfs = [(d / m) if (d is not None and m.n != 0) else None for d, m in zip(data_ratio, mc_ratio)]
+
+        # Format final output, preserving None
+        sfs_out = [ (round(r.n, 3), round(r.s, 3)) if r is not None else None for r in sfs]
+        data_ratio_out = [ (round(r.n, 3), round(r.s, 3)) if r is not None else None for r in data_ratio]
+        mc_ratio_out = [ (round(r.n, 3), round(r.s, 3)) if r is not None else None for r in mc_ratio]
 
         output = {
             'binvar'    : binvar,
             'bins'      : list(eff_dict['bins'])[:-1],
-            'sfs'       : sfs,
-            'data_effs' : data_ratio,
-            'mc_effs'   : mc_ratio,
+            'sfs'       : sfs_out,
+            'data_effs' : data_ratio_out,
+            'mc_effs'   : mc_ratio_out,
         }
 
-        if eff_dict['trigger'] not in outputs:
-            outputs[eff_dict['trigger']] = [copy.deepcopy(output)]
-        else:
-            outputs[eff_dict['trigger']].append(copy.deepcopy(output))
-
-        # outputs[eff_dict['trigger']] = copy.deepcopy(output)
-    pprint(outputs)
+        outputs[eff_dict['name']] = outputs.get(eff_dict['name'], copy.deepcopy(output))
 
     out_path = Path('eff_hists') / 'test' if cfg.test else Path(cfg.output.output_dir)
     with open(out_path / 'sf_jsons' / 'trigger_sfs.json', 'w') as outfile:
@@ -462,7 +614,7 @@ def make_sf_json(cfg, eff_dicts):
 
 def main(cfg):
     cfg = DotDict(cfg)
-    
+
     if cfg.file is None:
         eff_dicts = make_eff_plot_dict(cfg)
     elif Path(cfg.file).is_file():
@@ -477,7 +629,7 @@ def main(cfg):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', dest='config', type=str, default='eff_plot_cfg.yml', help='plot configuration file (.yml)')
+    parser.add_argument('-c', '--config', dest='config', type=str, default='eff_plot_cfg_v2.yml', help='plot configuration file (.yml)')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='printouts to stdout')
     parser.add_argument('-t', '--test', dest='test', action='store_true', help='only run test samples')
     parser.add_argument('-f', '--file', dest='file', default=None, help='make plots from pkl file')
@@ -495,3 +647,4 @@ if __name__=='__main__':
     cfg.file = args.file
 
     main(cfg)
+

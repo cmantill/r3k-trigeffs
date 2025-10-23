@@ -18,7 +18,7 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collect
 from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
 
 ROOT.PyConfig.IgnoreCommandLineOptions = True
-N_THREADS = 4
+
 
 class DotDict(dict):
     def __init__(self, *args, **kwargs):
@@ -61,41 +61,12 @@ def get_input_files(inputs, n_files=None):
     return files[:n_files] if n_files and n_files <= len(files) else files
 
 
-def load_weights_json(json_name, table_name='FONLLweightRun3'):
-    with open(json_name) as f:
-        weight_table = json.load(f)
-
-        edges = np.array(weight_table[table_name]['edges'])
-        weights = np.array(weight_table[table_name]['weights'])
-
-    return edges, weights
-
-class MCTriggerEfficiencyProducer(Module):
+class DataTriggerEfficiencyProducer(Module):
     def __init__(self, params):
         self.params = DotDict(params)
         self.writeHistFile = True
         self.trigger_map = self.params.trigger_map
-        self.theory_bins, self.theory_weights = load_weights_json(self.params.theory_weights_file)
-
-
-    def get_fonll_weight(self, b_pt):
-        idx = np.searchsorted(self.theory_bins, b_pt, side="right") - 1
-        if idx < 0:
-            return self.theory_weights[0]
-        if idx >= len(self.theory_weights):
-            return self.theory_weights[-1]
-        return self.theory_weights[idx]
-
-
-    def get_b_meson(self, gen_parts):
-        for gp in gen_parts:
-            if gp.pdgId == 443:
-                mom_idx = gp.genPartIdxMother
-                if mom_idx >= 0:
-                    mom = gen_parts[mom_idx]
-                    if abs(mom.pdgId) == 521:  # B±
-                        return mom
-        return None
+        self.trigger_map['trigger_OR'] = 0
 
 
     def make_th1(self, name, xbins):
@@ -124,8 +95,8 @@ class MCTriggerEfficiencyProducer(Module):
 
         # Hist Binnings
         self.diel_m_bins = np.linspace(2, 4, 100, dtype=np.double)
-        self.pt_bins     = np.array([5, 8, 11, 999], dtype=np.double)
         # self.pt_bins     = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
+        self.pt_bins     = np.array([5, 8, 11, 999], dtype=np.double)
         self.dr_bins     = np.array([0, 0.12, 0.2, 0.28, 0.44, 1.], dtype=np.double)
         self.npv_bins    = np.linspace(0, 100, 100, dtype=np.double)
 
@@ -145,11 +116,6 @@ class MCTriggerEfficiencyProducer(Module):
         pv        = Object(event, 'PV')
 
 
-        # Find B meson & theory weight
-        gen_parts = Collection(event, 'GenPart')
-        b_pt = self.get_b_meson(gen_parts).pt
-        w_theory = self.get_fonll_weight(b_pt)
-
         # Define Kinematic Variables
         # lead_el_pt    = electrons[0].pt
         sublead_el_pt = electrons[1].pt
@@ -160,7 +126,8 @@ class MCTriggerEfficiencyProducer(Module):
         diel_m        = (electrons[0].p4() + electrons[1].p4()).M()
 
         # Define Trigger Paths
-        trig_bit_dict = {k : getattr(trig_L1, v[0]) and getattr(trig_HLT, v[1]) for k,v in self.trigger_map.items()}
+        trig_bit_dict = {k : (getattr(trig_L1, v[0]) and getattr(trig_HLT, v[1]) if v else 0) for k,v in self.trigger_map.items()}
+        trig_bit_dict['trigger_OR'] = any(i for i in trig_bit_dict.values())
 
         # Trigger Efficiencies
         for path in trig_bit_dict.keys():
@@ -168,7 +135,7 @@ class MCTriggerEfficiencyProducer(Module):
                 self.h_diel_m_denom_ptbinned_dict[path],
                 diel_m, 
                 sublead_el_pt,
-                w_theory
+                1
             )
 
             if trig_bit_dict[path]:
@@ -176,15 +143,14 @@ class MCTriggerEfficiencyProducer(Module):
                     self.h_diel_m_num_ptbinned_dict[path],
                     diel_m, 
                     sublead_el_pt,
-                    w_theory
+                    1
                 )
 
                 self.fill_th1(
                     self.h_npv_dict[path],
                     pv.npvs,
-                    w_theory
+                    1
                 )
-
         return True
 
 
@@ -194,7 +160,7 @@ def worker(params):
             params['input_files'],
             cut=params['presel'],
             branchsel=None,
-            modules=[MCTriggerEfficiencyProducer(params)],
+            modules=[DataTriggerEfficiencyProducer(params)],
             noOut=True,
             histDirName='hists',
             histFileName=str(params['output_file']),
@@ -211,21 +177,21 @@ def main(cfg):
     os.makedirs(out_path, exist_ok=True)
 
     job_configs = []
-    for job in cfg.mc_samples:
+    for job in cfg.data_samples:
         job = DotDict(job)
         if (global_cfg.test and ('test' not in job.name)) or (not global_cfg.test and ('test' in job.name)):
             continue
         job.input_files = get_input_files(job.inputs)
         job.output_dir = out_path
         job.output_file = out_path / f'effs_{job.name}.root'
-        job.theory_weights_file = global_cfg.theory_weights_file
         job.trigger_map = cfg.trigger_map
         job_configs.append(copy.deepcopy(job))
 
     if 'mp' in global_cfg.run_strategy:
         start_time = time.perf_counter()
 
-        with mp.Pool(processes=N_THREADS) as pool:
+        n_cores = mp.cpu_count() // 2
+        with mp.Pool(processes=n_cores) as pool:
             pool.map(worker, [job.to_dict() for job in job_configs])
 
         finish_time = time.perf_counter()

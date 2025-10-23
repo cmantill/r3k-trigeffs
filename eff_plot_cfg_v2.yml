@@ -1,21 +1,48 @@
 inputs:
-  data_dir: eff_hists/2_21_25/
-  mc_dir: mc_eff_hists_v2/
+  data_dir: eff_hists/10_14_25_low_dr/
+  mc_dir: eff_hists/10_14_25_low_dr/
   hist_dir: hists/
 
 output:
-  output_dir: eff_plots_v2/
+  output_dir: eff_plots_v2/10_14_25_low_dr
 
 plots:
-  trigger_OR_test:
-    files:
-      data: effs_data_trigger_OR_test.root
-      mc: effs_jpsi_trigger_OR_test_trigger_OR.root
-    triggers: [trigger_OR]
-    variables: [pt,dr]
   trigger_OR:
     files:
       data: effs_data_trigger_OR.root
-      mc: effs_jpsi_resonant_trigger_OR.root
-    triggers: [trigger_OR]
+      mc: effs_jpsi_resonant.root
     variables: [pt]
+    triggers: 
+      data_trigger: trigger_OR
+    mc_triggers:
+      - path: L1_11p0_HLT_6p5 
+        weight: 4.66E-2
+      - path: L1_10p5_HLT_6p5 
+        weight: 3.35E-2
+      - path: L1_10p5_HLT_5p0 
+        weight: 3.04E-3
+      - path: L1_9p0_HLT_6p0 
+        weight: 2.61E-1
+      - path: L1_8p5_HLT_5p5 
+        weight: 9.86E-2
+      - path: L1_8p5_HLT_5p0 
+        weight: 1.99E-2
+      - path: L1_8p0_HLT_5p0 
+        weight: 2.04E-1
+      - path: L1_7p5_HLT_5p0 
+        weight: 4.83E-2
+      - path: L1_7p0_HLT_5p0 
+        weight: 7.86E-2
+      - path: L1_6p5_HLT_4p5 
+        weight: 1.07E-2
+      - path: L1_6p0_HLT_4p0 
+        weight: 7.42E-2
+      - path: L1_5p5_HLT_6p0 
+        weight: 4.42E-3
+      - path: L1_5p5_HLT_4p0 
+        weight: 1.91E-2
+      - path: L1_5p0_HLT_4p0 
+        weight: 1.22E-3
+      - path: L1_4p5_HLT_4p0 
+        weight: 8.85E-4
+

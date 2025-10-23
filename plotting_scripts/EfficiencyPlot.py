@@ -98,18 +98,25 @@ class EfficiencyPlot(PlotBase):
             p1.cd()
 
             # Primary plot
-            eff1.SetTitle(self.title_string)
-            eff2.SetTitle(self.title_string)
-            eff1.Draw()
-            self.format_axes( eff1, 
-                              option='upper', 
-                              xrange=self.xrange, 
-                              yrange=self.yrange, 
+            frame = eff1.GetTotalHistogram().Clone("frame")
+            frame.Reset()
+            frame.SetTitle(self.title_string)
+            frame.SetMinimum(self.yrange[0])
+            frame.SetMaximum(self.yrange[1])
+            frame.SetStats(0)
+            frame.Draw("AXIS")
+
+            eff1.Draw("P SAME")
+            eff2.Draw("P SAME E")
+
+            self.format_axes( frame,
+                              option='upper',
+                              xrange=self.xrange,
+                              yrange=self.yrange,
                               text_size=self.text_size,
                               title_string=self.title_string,
                               x_title=self.x_title,
                               y_title=self.y_title,)
-            eff2.Draw('SAME E')
 
             # Legend
             leg.Draw()
