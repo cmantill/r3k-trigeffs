@@ -8,6 +8,7 @@ import time
 import json
 import yaml
 import glob
+import array
 import ROOT
 from pathlib import Path
 import copy
@@ -49,7 +50,6 @@ class DotDict(dict):
     def to_dict(self):
         return {k: v.to_dict() if isinstance(v, DotDict) else v for k, v in self.items()}
 
-
 class SkimEvents(Module):
     def __init__(self):
         self.writeHistFile = True
@@ -57,6 +57,99 @@ class SkimEvents(Module):
         Module.beginJob(self, histFile, histDirName)
     def analyze(self, event):
         return True
+
+class SkimEvents_wVertex(Module):
+    def __init__(self):
+        # --- Call the parent class's __init__ ---
+        # This is CRITICAL. It initializes self.out, self.histFile, etc.
+        Module.__init__(self)
+        
+        self.writeHistFile = False
+        
+        # --- Initialize buffers for new branches ---
+        # 'f' is for float, 'i' is for integer
+        self.dielectron_mass_kin = array.array('f', [0.])
+        self.dielectron_vtxChi2 = array.array('f', [0.])
+        self.dielectron_mass_sv = array.array('f', [0.])
+        self.dielectron_svIdx = array.array('i', [0])
+        
+        # --- TLorentzVectors for kinematic calculation ---
+        self.ele1_vec = ROOT.TLorentzVector()
+        self.ele2_vec = ROOT.TLorentzVector()
+
+    def beginJob(self, histFile=None, histDirName=None):
+        # beginJob is called *before* the output tree is created.
+        # Do not define branches here.
+        Module.beginJob(self, histFile, histDirName)
+        
+    def initbranches(self, tree):
+        """
+        initbranches is called *after* the output tree is created.
+        This is the correct place to define new branches.
+        """
+        # --- Define new branches in the output TTree ---
+        # Use tree.Branch, which is the TTree method, as self.out may not be set yet.
+        tree.Branch("Dielectron_mass_kin", self.dielectron_mass_kin, "Dielectron_mass_kin/F")
+        tree.Branch("Dielectron_vtxChi2", self.dielectron_vtxChi2, "Dielectron_vtxChi2/F")
+        tree.Branch("Dielectron_mass_SV", self.dielectron_mass_sv, "Dielectron_mass_SV/F")
+        tree.Branch("Dielectron_svIdx", self.dielectron_svIdx, "Dielectron_svIdx/I")
+
+    def analyze(self, event):
+        """
+        Processes events that pass the PostProcessor's preselection cut.
+        Calculates dielectron mass and saves related electron variables.
+        """
+        
+        # --- Default "not found" values ---
+        kin_mass = -99.
+        sv_chi2 = -99.
+        sv_mass = -99.
+        sv_idx = -1
+
+        if event.nElectron >= 2:
+            # --- 1. Calculate Kinematic Mass (always) ---
+            self.ele1_vec.SetPtEtaPhiM(
+                event.Electron_pt[0], event.Electron_eta[0],
+                event.Electron_phi[0], event.Electron_mass[0]
+            )
+            self.ele2_vec.SetPtEtaPhiM(
+                event.Electron_pt[1], event.Electron_eta[1],
+                event.Electron_phi[1], event.Electron_mass[1]
+            )
+            kin_mass = (self.ele1_vec + self.ele2_vec).M()
+
+            # --- 2. Check for a Common Secondary Vertex ---
+            # This logic leverages the pre-computed links in NanoAOD.
+            # It checks if both electrons point to the *same* valid SV.
+            lead_svIdx = event.Electron_svIdx[0]
+            sublead_svIdx = event.Electron_svIdx[1]
+
+            if (lead_svIdx >= 0 and lead_svIdx == sublead_svIdx):
+                # A common, valid SV is found. Save its properties.
+                common_idx = lead_svIdx
+                
+                # Check bounds just in case, though this should be guaranteed
+                if common_idx < event.nSV:
+                    sv_chi2 = event.SV_chi2[common_idx]
+                    sv_mass = event.SV_mass[common_idx]
+                    sv_idx = common_idx
+                else:
+                    print(f"Warning: Electron_svIdx {common_idx} is out of bounds for nSV {event.nSV}.")
+
+        # --- 3. Fill the new branches for every event ---
+        # We must fill the buffers *before* calling tree.Fill()
+        # The PostProcessor will call tree.Fill() implicitly.
+        self.dielectron_mass_kin[0] = kin_mass
+        self.dielectron_vtxChi2[0] = sv_chi2
+        self.dielectron_mass_sv[0] = sv_mass
+        self.dielectron_svIdx[0] = sv_idx
+
+        # We don't call self.out.fillBranch here.
+        # By defining the branches with array buffers,
+        # the TTree.Fill() call (done by the PostProcessor)
+        # will automatically read the current value from the buffer.
+        
+        return True # Keep the event
 
 
 def worker(params):
@@ -94,7 +187,7 @@ def main(cfg):
         job_configs.append(copy.deepcopy(job_dict))
 
     start_time = time.perf_counter()
-    if 'mp' in cfg['config']['run_strategy']:
+    if 'mp' in cfg.run_strategy:
         n_cores = mp.cpu_count()
         if cfg.verbose:
             print(''.join(['Distributing ~',str(len(job_configs)),' jobs to ', str(n_cores), ' cores...']))
@@ -102,12 +195,12 @@ def main(cfg):
         with mp.Pool(processes=n_cores) as pool:
             pool.map(worker, [job.to_dict() for job in job_configs])
 
-    if 'batch' in cfg['config']['run_strategy']:
+    elif 'crab' in cfg.run_strategy:
         for params in job_configs:
             config.General.workArea = 'crab_skimmer/crab_jobs'
             config.General.requestName = '_'.join([params.name,datetime.now().strftime("%m_%d_%y")])
             config.Data.userInputFiles = [f.replace('/eos/cms/', 'root://cmsxrootd.fnal.gov//') for f in params.files]
-            config.Data.unitsPerJob = 200
+            config.Data.unitsPerJob = 80
             config.Data.totalUnits = len(params.files)
             config.Data.outLFNDirBase = params.output_path[params.output_path.index('/store'):]
 
@@ -130,10 +223,14 @@ def main(cfg):
                     raise FileExistsError('CRAB request already exists. Try a job with another name.')
 
             res = crabCommand('submit', config=config)
+    
             print(f'Submitted job {params.name} to CRAB batch system\n',res)
-    else:
+    elif 'serial' in cfg.run_strategy:
         for params in job_configs:
             worker(params)
+
+    else:
+        raise ValueError(f'Invalid mode "{cfg.run_strategy}". Must be one of ["serial", "mp", "crab"]')
 
     if cfg.verbose:
         finish_time = time.perf_counter()
@@ -146,6 +243,9 @@ if __name__=='__main__':
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='printouts to stdout')
     parser.add_argument('-d', '--datasets', dest='datasets', nargs='+', help='target datasets to run (from cfg file)')
     parser.add_argument('-t', '--test', dest='test', action='store_true', help='only run test samples')
+    parser.add_argument('-m', '--method', dest='method', choices=['serial', 'crab', 'mp'], help='execution mode')
+    parser.add_argument("--mode", )
+
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
@@ -154,5 +254,6 @@ if __name__=='__main__':
     cfg.verbose = args.verbose
     cfg.sel_datasets = args.datasets
     cfg.test = args.test
+    cfg.run_strategy = args.method if args.method else cfg['config']['run_strategy']
     
     main(cfg)

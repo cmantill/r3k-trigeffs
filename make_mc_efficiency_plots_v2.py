@@ -58,15 +58,22 @@ def set_verbosity(verb):
 
 
 def get_event_count(h, xrange=None):
-    nEvents = 0
-    err = np.double(0.)
+    nEvents = 0.0
+    err = 0.0
+    
     if xrange is not None:
         bin_low = h.GetXaxis().FindBin(xrange[0])
         bin_high = h.GetXaxis().FindBin(xrange[1])
-        nEvents = h.IntegralAndError(bin_low, bin_high, err)
+        
+        error_ref = ROOT.Double(0.0)
+        
+        nEvents = h.IntegralAndError(bin_low, bin_high, error_ref)
+        err = float(error_ref)
+    
     else:
-        nEvents = h.GetEntries()
-        err = 1 / np.sqrt(nEvents)
+        nEvents = h.GetSumOfWeights() 
+        err = np.sqrt(nEvents)
+        
     return nEvents, err
 
 
@@ -88,8 +95,8 @@ def estimateBins(h,nbins=5):
 def assign_hist_format(h_name):
     if 'ptbinned' in h_name:
         h_format = {
-            # 'bins' : np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 20], dtype=np.double),
-            'bins' : np.array([5, 8, 11, 20], dtype=np.double),
+            'bins' : np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 20], dtype=np.double),
+            # 'bins' : np.array([5, 8, 11, 20], dtype=np.double),
             'xlabel' : 'Sublead Electron p_{T} [GeV]',
         }
     elif 'drbinned' in h_name:
@@ -146,34 +153,6 @@ def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=
     chi2 = float('inf')
     attempt = 0
     sig_unc_ratio = 1
-
-    # while (math.isnan(chi2) or chi2 > chi2_threshold or sig_unc_ratio > 1) and attempt < max_tries:
-    #     if fit_result:
-    #         fit_result.Delete()
-
-    #     fit_result = fit_model.fitTo(
-    #         data,
-    #         ROOT.RooFit.Save(True),
-    #         ROOT.RooFit.Minos(True),
-    #         ROOT.RooFit.ExternalConstraints(ROOT.RooArgSet(n_constraint_pdf)),
-    #         printlevel
-    #     )
-    #     sig_unc_ratio = sig_coeff.getError() / sig_coeff.getVal() if sig_coeff.getVal() else 99
-    #     tmp_frame = mass.frame(ROOT.RooFit.Title('tmp'))
-    #     data.plotOn(tmp_frame)
-    #     if signal_only:
-    #         fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
-    #     else:
-    #         fit_model.plotOn(tmp_frame, ROOT.RooFit.Normalization(sig_coeff.getVal()+bkg_coeff.getVal(),ROOT.RooAbsReal.NumEvent))
-
-
-    #     chi2 = tmp_frame.chiSquare('fit_model_Norm[mass]', 'h_data', len(fit_result.floatParsFinal()))
-    #     tmp_frame.Delete()
-
-    #     attempt += 1
-
-    fit_result = None
-    attempt = 0
     good_fit = False
 
     while not good_fit and attempt < max_tries:
@@ -188,12 +167,9 @@ def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=
             printlevel
         )
 
-        # 🎯 CRITICAL FIX: Check the fit status and covariance quality
         fit_status = fit_result.status()
         cov_qual = fit_result.covQual()
-        print(f'AAA: {savename}, {fit_status}, {cov_qual}')
         if fit_status >= 0 and cov_qual >= 2:
-            # Fit is potentially good, now check chi2 and error
             sig_unc_ratio = sig_coeff.getError() / sig_coeff.getVal() if sig_coeff.getVal() > 0 else float('inf')
             
             tmp_frame = mass.frame(ROOT.RooFit.Title('tmp'))
@@ -208,6 +184,21 @@ def do_fit(h, signal_only=False, savename=None, get_params=False, signal_params=
 
             if not math.isnan(chi2) and chi2 < chi2_threshold and sig_unc_ratio < 1:
                 good_fit = True
+            
+        if fit_result and not good_fit:
+            params_to_randomize = [cb_sigma, cb_alpha, cb_n] + bern_pars 
+            for param in params_to_randomize:
+                current_val = param.getVal()
+                min_val = param.getMin()
+                max_val = param.getMax()
+                
+                perturbation_range = (max_val - min_val) * 0.1
+                random_shift = np.random.uniform(-perturbation_range, perturbation_range)
+                new_val = current_val + random_shift
+                new_val = max(min_val, min(max_val, new_val))
+                
+                param.setVal(new_val)
+                param.setError(0.0)
         
         attempt += 1
 
@@ -403,19 +394,6 @@ def make_eff_plot_dict(cfg):
         data_hists = get_hists(plot_cfg)
         fit_output_file = plot_cfg.output_file.parent / 'fits' / plot_cfg.output_file.name
         for i, (data_num_hist, data_denom_hist) in enumerate(data_hists[0]):
-            # n_num_data, n_num_data_err, _, _ = do_fit(
-            #     data_num_hist,
-            #     savename=fit_output_file.with_stem(f'data_num_fit_{plot_cfg.name}_bin{i}'),
-            #     printlevel=cfg.printlevel,
-            # )
-            # n_denom_data, n_denom_data_err, _, _ = do_fit(
-            #     data_denom_hist,
-            #     savename=fit_output_file.with_stem(f'data_denom_fit_{plot_cfg.name}_bin{i}'),
-            #     printlevel=cfg.printlevel,
-            # )
-            # eff_dict['data_num_yields'].append((n_num_data, n_num_data_err))
-            # eff_dict['data_denom_yields'].append((n_denom_data, n_denom_data_err))
-
             num_results = do_fit(
                 data_num_hist,
                 savename=fit_output_file.with_stem(f'data_num_fit_{plot_cfg.name}_bin{i}'),
@@ -433,30 +411,6 @@ def make_eff_plot_dict(cfg):
             eff_dict['data_num_yields'].append((n_num_data, n_num_data_err))
             eff_dict['data_denom_yields'].append((n_denom_data, n_denom_data_err))
 
-        # if plot_cfg.mc_file and plot_cfg.mc_triggers:
-        #     mc_file = ROOT.TFile(str(plot_cfg.mc_file))
-        #     n_bins = len(eff_dict['bins']) - 1
-        #     mc_path_effs = []
-        #     for mc_trig in plot_cfg.mc_triggers:
-        #         path = mc_trig['path'].strip('"')
-        #         weight = mc_trig['weight']
-        #         num_hist_name = f'hists/diel_m_{path}_num_{plot_cfg.var}binned'
-        #         denom_hist_name = f'hists/diel_m_{path}_denom_{plot_cfg.var}binned'
-        #         num_hist = mc_file.Get(num_hist_name)
-        #         denom_hist = mc_file.Get(denom_hist_name)
-        #         effs = []
-        #         for ibin in range(1, n_bins + 1):
-        #             num_proj = num_hist.ProjectionX('num_bin', ibin, ibin + 1)
-        #             n_num = num_proj.GetEntries()
-        #             n_num_err = math.sqrt(n_num) # num_proj.GetBinError(ibin)
-        #             denom_proj = denom_hist.ProjectionX('denom_bin', ibin, ibin + 1)
-        #             n_denom = denom_proj.GetEntries()
-        #             n_denom_err = math.sqrt(n_denom) # denom_proj.GetBinError(ibin)
-        #             eff = ufloat(n_num, n_num_err) / ufloat(n_denom, n_denom_err) if n_denom > 0 else ufloat(0, 0)
-        #             effs.append((eff, weight))
-        #         mc_path_effs.append(effs)
-
-
         if plot_cfg.mc_file and plot_cfg.mc_triggers:
             mc_file = ROOT.TFile(str(plot_cfg.mc_file))
             n_bins = len(eff_dict['bins']) - 1
@@ -473,8 +427,10 @@ def make_eff_plot_dict(cfg):
                     num_proj = num_hist.ProjectionX('num_bin', ibin, ibin + 1)
                     denom_proj = denom_hist.ProjectionX('denom_bin', ibin, ibin + 1)
                     
-                    if denom_proj.GetEntries() > 0:
-                        eff = ufloat(num_proj.GetEntries(), math.sqrt(num_proj.GetEntries())) / ufloat(denom_proj.GetEntries(), math.sqrt(denom_proj.GetEntries()))
+                    if denom_proj.GetSumOfWeights() > 0:
+                        nNum, nNum_err = get_event_count(num_proj)
+                        nDenom, nDenom_err = get_event_count(denom_proj)
+                        eff = ufloat(nNum, nNum_err) / ufloat(nDenom, nDenom_err)
                     else:
                         eff = ufloat(0, 0)
                     effs.append(eff * weight)
