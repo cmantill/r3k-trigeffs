@@ -177,11 +177,12 @@ def main(cfg):
             continue
         elif not cfg.test and ('test' in job_name):
             continue
+        print(job_name)
         job_dict = DotDict({
             'name' : job_name,
             'json' : params.json_path if params.json_path else None,
             'output_path' : params.output_path,
-            'files' : [f for path in params.files for f in glob.glob(path, recursive=True)],
+            'files' : [f for path in params.files for f in glob.glob(path, recursive=True) if params.files],
             'preselection' : params.preselection,
         })
         job_configs.append(copy.deepcopy(job_dict))
@@ -199,7 +200,12 @@ def main(cfg):
         for params in job_configs:
             config.General.workArea = 'crab_skimmer/crab_jobs'
             config.General.requestName = '_'.join([params.name,datetime.now().strftime("%m_%d_%y")])
+            #if params.files is not None:
             config.Data.userInputFiles = [f.replace('/eos/cms/', 'root://cmsxrootd.fnal.gov//') for f in params.files]
+            #config.Data.inputDBS = 'global'
+            #config.Data.inputDataset = params.dataset
+            #print(params.dataset)
+                
             config.Data.unitsPerJob = 80
             config.Data.totalUnits = len(params.files)
             config.Data.outLFNDirBase = params.output_path[params.output_path.index('/store'):]

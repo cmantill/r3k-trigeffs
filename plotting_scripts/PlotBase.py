@@ -154,7 +154,8 @@ class PlotBase():
             hist.SetTitle('')
             labelsize = labelsize_map[text_size] / padsize
             titlesize = titlesize_map[text_size] / padsize
-            
+            g = hist.GetPaintedGraph() if hist.InheritsFrom(TEfficiency.Class()) else hist
+
             # X-Axis
             if x_title is not None: g.GetXaxis().SetTitle(x_title)
             if xrange is not None: hist.GetXaxis().SetRangeUser(xrange[0],xrange[1])

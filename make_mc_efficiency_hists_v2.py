@@ -61,6 +61,7 @@ def get_input_files(inputs, n_files=None):
     return files[:n_files] if n_files and n_files <= len(files) else files
 
 
+# Fixed Order + Next-to-Leading Log
 def load_weights_json(json_name, table_name='FONLLweightRun3'):
     with open(json_name) as f:
         weight_table = json.load(f)
@@ -124,8 +125,8 @@ class MCTriggerEfficiencyProducer(Module):
 
         # Hist Binnings
         self.diel_m_bins = np.linspace(2, 4, 100, dtype=np.double)
-        # self.pt_bins     = np.array([5, 8, 11, 999], dtype=np.double)
-        self.pt_bins     = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
+        self.pt_bins     = np.array([5, 8, 999], dtype=np.double)
+        # self.pt_bins     = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
         self.dr_bins     = np.array([0, 0.12, 0.2, 0.28, 0.44, 1.], dtype=np.double)
         self.npv_bins    = np.linspace(0, 100, 100, dtype=np.double)
 

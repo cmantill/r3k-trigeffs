@@ -1,5 +1,6 @@
 config:
-  run_strategy: serial
+  run_strategy: crab
+  # 2 electrons (opp charge, pT>4, eta<1.22), m(ee)< 5, dr(ee) >0.03
   preselection_data: &preselection_data 'nElectron > 1
       && Electron_pt[0] > 4.
       && Electron_pt[1] > 4.
@@ -35,6 +36,24 @@ config:
       && sqrt(pow(Electron_eta[0]-Electron_eta[1],2) + pow(acos(cos(Electron_phi[0]-Electron_phi[1])),2)) > 0.03 
       && Electron_charge[0] + Electron_charge[1] == 0'
 
+all_2023_data: &all_2023_data
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass0/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass0/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass1/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass1/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass2/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass2/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass3/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass3/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass4/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass4/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass5/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass5/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass6/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass6/Run2023D/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass7/Run2023C/*.root
+     - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass7/Run2023D/*.root
+
 all_2022_data: &all_2022_data
   - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass0/*/*/*/output_*.root
   - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass1/*/*/*/output_*.root
@@ -45,31 +64,17 @@ all_2022_data: &all_2022_data
   - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass6/*/*/*/output_*.root
   - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass7/*/*/*/output_*.root
 
-erasFG_2022_data: &erasFG_2022_data
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass0/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass0/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass1/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass1/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass2/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass2/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass3/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass3/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass4/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass4/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass5/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass5/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass6/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass6/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass7/Run3_ParkingDoubleMuonLowMass0_2022F_v1_Nano/*/*/output_*.root
-  - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass7/Run3_ParkingDoubleMuonLowMass0_2022G_v1_Nano/*/*/output_*.root
-
 datasets:
-  # data_test:
-  #   files : 
-  #     - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass0/Run3_ParkingDoubleMuonLowMass0_2022C_v1_Nano/221215_115329/0000/output_12*.root
-  #   output_path : /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/test
-  #   json_path   : json_files/Eras_CDEFG/trigger_OR.json
-  #   preselection: *preselection_data
+  data_test:
+    dataset: /ParkingDoubleMuonLowMass0/Run2023C-NanoAODv15_v2-v1/NANOAOD
+    files :
+      #- /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMass_NanoAOD/ParkingDoubleMuonLowMass0/Run3_ParkingDoubleMuonLowMass0_2022C_v1_Nano/221215_115329/0000/output_12*.root
+      - /eos/cms/store/cmst3/group/xee/tree_v1/data/allnanoColl/ParkingDoubleMuonLowMass7/Run2023D/2300519b-6503-42a2-b686-531341a2c62d.root
+      #- /afs/cern.ch/user/c/cmantill/work/public/lowmassee/CMSSW_14_0_6/src/r3k-trigeffs/0853c500-a188-4ce9-a6df-905649385e42.root
+    output_path : /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/test
+    #json_path   : json_files/Eras_CDEFG/trigger_OR.json
+    json_path:    json_files/Cert_Collisions2023_366442_370790_Golden.json
+    preselection: *preselection_data
 
   #jpsi_test:
     #files : 
@@ -78,115 +83,42 @@ datasets:
     #json_path   : null
     #preselection: *preselection_mc
 
+  #jpsi_resonant_test:
+  #  files : 
+  #    - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/BuTOjpsiKEE_NanoAOD_Private/output_11*.root
+  #  output_path : ./eff_skims/test
+  #  json_path   : null
+  #  preselection: *preselection_mc
+
   jpsi_resonant_test:
-    files : 
-      - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/BuTOjpsiKEE_NanoAOD_Private/output_11*.root
-    output_path : ./eff_skims/test
-    json_path   : null
+    files :
+      - /eos/cms/store/cmst3/group/xee/tree_v1/backgroundSamples/allnanoColl/BuToKJPsi_JPsiToEE_SoftQCD_TuneCP5_13p6TeV_pythia8-evtgen/crab_BuToKJpsi_Toee_2023BPix/251002_142819/0000/*.root
+      - /eos/cms/store/cmst3/group/xee/tree_v1/backgroundSamples/allnanoColl/BuToKJPsi_JPsiToEE_SoftQCD_TuneCP5_13p6TeV_pythia8-evtgen/crab_BuToKJpsi_Toee_2023preBPix/251002_142810/0000/*.root
+    output_path : /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/test
+    json_path: null
     preselection: *preselection_mc
 
   jpsi_resonant:
     files : 
-      - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/BuTOjpsiKEE_NanoAOD_Private/*.root
-    output_path : /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final
+      #- /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/BuTOjpsiKEE_NanoAOD_Private/*.root
+      - /eos/cms/store/cmst3/group/xee/tree_v1/backgroundSamples/allnanoColl/BuToKJPsi_JPsiToEE_SoftQCD_TuneCP5_13p6TeV_pythia8-evtgen/crab_BuToKJpsi_Toee_2023BPix/251002_142819/0000/*.root
+      - /eos/cms/store/cmst3/group/xee/tree_v1/backgroundSamples/allnanoColl/BuToKJPsi_JPsiToEE_SoftQCD_TuneCP5_13p6TeV_pythia8-evtgen/crab_BuToKJpsi_Toee_2023preBPix/251002_142810/0000/*.root      
+    #output_path : /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final
+    output_path : /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/jpsi_resonant_2023
     json_path   : null
     preselection: *preselection_mc
 
-  #L1_11p0_HLT_6p5_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_11p0_HLT_6p5_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_11p0_HLT_6p5_Excl
-
-  #L1_10p5_HLT_6p5_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_10p5_HLT_6p5_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_10p5_HLT_6p5_Excl
-
-  #L1_10p5_HLT_5p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_10p5_HLT_5p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_10p5_HLT_5p0_Excl
-
-  #L1_9p0_HLT_6p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_9p0_HLT_6p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_9p0_HLT_6p0_Excl
-
-  #L1_8p5_HLT_5p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_8p5_HLT_5p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_8p5_HLT_5p0_Excl
-
-  #L1_8p5_HLT_5p5_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_8p5_HLT_5p5_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_8p5_HLT_5p5_Excl
-
-  #L1_8p0_HLT_5p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_8p0_HLT_5p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_8p0_HLT_5p0_Excl
-
-  #L1_7p5_HLT_5p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_7p5_HLT_5p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_7p5_HLT_5p0_Excl
-
-  #L1_7p0_HLT_5p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_7p0_HLT_5p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_7p0_HLT_5p0_Excl
-
-  #L1_6p5_HLT_4p5_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_6p5_HLT_4p5_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_6p5_HLT_4p5_Excl
-
-  #L1_6p0_HLT_4p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_6p0_HLT_4p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_6p0_HLT_4p0_Excl
-
-  #L1_5p5_HLT_6p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_5p5_HLT_6p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_5p5_HLT_6p0_Excl
-
-  #L1_5p5_HLT_4p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_5p5_HLT_4p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_5p5_HLT_4p0_Excl
-
-  #L1_5p0_HLT_4p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_5p0_HLT_4p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_5p0_HLT_4p0_Excl
-
-  #L1_4p5_HLT_4p0_Excl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_4p5_HLT_4p0_Excl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_4p5_HLT_4p0_Excl
+  trigger_OR_2023:
+    files:        *all_2023_data
+    preselection: *preselection_data
+    json_path:    json_files/Cert_Collisions2023_366442_370790_Golden.json
+    output_path:  /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2_2023/
 
   trigger_OR:
     files:        *all_2022_data
     preselection: *preselection_data
     json_path:    json_files/Eras_CDEFG/trigger_OR.json
-    output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/trigger_OR_v2
+    output_path:  /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2
 
   trigger_OR_test:
     files : 
@@ -194,34 +126,3 @@ datasets:
     preselection: *preselection_data
     json_path:    json_files/Eras_CDEFG/trigger_OR.json
     output_path : ./eff_skims/test
-
-  #erasFG_trigger_OR:
-    #files:        *erasFG_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/trigger_OR.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/erasFG_trigger_OR
-
-  L1_11p0_HLT_6p5_Incl:
-    files:        *all_2022_data
-    preselection: *preselection_data
-    json_path:    json_files/Eras_CDEFG/L1_11p0_HLT_6p5_Incl_Final.json
-    output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_11p0_HLT_6p5_Incl
-
-  #L1_5p5_HLT_4p0_Incl:
-    #files:        *all_2022_data
-    #preselection: *preselection_data
-    #json_path:    json_files/Eras_CDEFG/L1_5p5_HLT_4p0_Incl_Final.json
-    #output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_5p5_HLT_4p0_Incl
-
-  L1_8p0_HLT_5p0_Incl:
-    files:        *all_2022_data
-    preselection: *preselection_data
-    json_path:    json_files/Eras_CDEFG/L1_8p0_HLT_5p0_Incl_Final.json
-    output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_8p0_HLT_5p0_Incl
-
-
-  L1_6p0_HLT_4p0_Incl:
-    files:        *all_2022_data
-    preselection: *preselection_data
-    json_path:    json_files/Eras_CDEFG/L1_6p0_HLT_4p0_Incl_Final.json
-    output_path:  /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/L1_6p0_HLT_4p0_Incl

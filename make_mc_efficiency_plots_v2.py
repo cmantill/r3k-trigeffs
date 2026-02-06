@@ -95,7 +95,9 @@ def estimateBins(h,nbins=5):
 def assign_hist_format(h_name):
     if 'ptbinned' in h_name:
         h_format = {
-            'bins' : np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 20], dtype=np.double),
+            #'bins' : np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 20], dtype=np.double),
+            #[5, 11, 999
+            'bins' : np.array([5, 8, 20], dtype=np.double),
             # 'bins' : np.array([5, 8, 11, 20], dtype=np.double),
             'xlabel' : 'Sublead Electron p_{T} [GeV]',
         }
@@ -338,7 +340,7 @@ def make_plotlist(cfg):
                 'data_trigger': data_trigger,
                 'data_file': data_in_path / plot_dict.files.data,
                 'mc_file': mc_in_path / plot_dict.files.mc if hasattr(plot_dict.files, 'mc') else None,
-                'output_file': out_path / Path('_'.join(['eff', data_trigger, f'{var}binned'])).with_suffix('.pdf'),
+                'output_file': out_path / Path('_'.join(['eff', data_trigger, f'{var}binned'])).with_suffix('.png'),
                 'mc_triggers': plot_dict.mc_triggers if hasattr(plot_dict, 'mc_triggers') else [],
                 'var': var,
                 **assign_hist_format(f'{var}binned'),
@@ -434,6 +436,7 @@ def make_eff_plot_dict(cfg):
                     else:
                         eff = ufloat(0, 0)
                     effs.append(eff * weight)
+                    print(f"mc_trig {path}: {weight}, eff: {eff}, eff*weight: {eff * weight}, num: {nNum}, denom: {nDenom}")
                 mc_path_effs.append(effs)
 
             mc_eff_mixture = []
@@ -500,13 +503,14 @@ def plot_efficiencies(eff_dicts, test=False):
             'yrange': (0., 1.1),
             'leg_scale': .65,
             'leg_header': '',
+            'x_title': d["xlabel"],
         })
 
         eff_plot.plotEfficiencies(
             eff_data,
             eff_mc,
             ratio=True,
-            h1_title='ParkingDoubleMuonLowMass 2022 Data',
+            h1_title='ParkingDoubleMuonLowMass Data',
             h2_title='B^{+} #rightarrow J/#psi K^{+} MC',
             save=str(d['output_file']),
             addIntegral=False

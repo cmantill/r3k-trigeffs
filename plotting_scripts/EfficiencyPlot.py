@@ -130,7 +130,8 @@ class EfficiencyPlot(PlotBase):
             r = self.eff_ratio(eff1, eff2)
             r.Draw()
             self.format_entry(r)
-            _ = self.format_axes(r, option='lower', xrange=self.xrange, yrange=self.rrange, text_size=self.text_size)
+            print(self.x_title)
+            _ = self.format_axes(r, option='lower', xrange=self.xrange, yrange=self.rrange, text_size=self.text_size, x_title=self.x_title)
 
             # TODO Ratio legend 
 
