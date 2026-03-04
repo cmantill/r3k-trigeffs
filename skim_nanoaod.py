@@ -182,8 +182,10 @@ def main(cfg):
             'name' : job_name,
             'json' : params.json_path if params.json_path else None,
             'output_path' : params.output_path,
-            'files' : [f for path in params.files for f in glob.glob(path, recursive=True) if params.files],
+            'files' : [f for path in params.files for f in glob.glob(path, recursive=True)] if params.files else None,
+            'dataset' : params.dataset if params.dataset else None,
             'preselection' : params.preselection,
+            'branchesIn' : params.branches_selection if params.branches_selection else None,
         })
         job_configs.append(copy.deepcopy(job_dict))
 
@@ -200,19 +202,26 @@ def main(cfg):
         for params in job_configs:
             config.General.workArea = 'crab_skimmer/crab_jobs'
             config.General.requestName = '_'.join([params.name,datetime.now().strftime("%m_%d_%y")])
-            #if params.files is not None:
-            config.Data.userInputFiles = [f.replace('/eos/cms/', 'root://cmsxrootd.fnal.gov//') for f in params.files]
-            #config.Data.inputDBS = 'global'
-            #config.Data.inputDataset = params.dataset
-            #print(params.dataset)
+            if params.files is not None:
+                # FIXME: be smarter about home-n
+                config.Data.userInputFiles = [f.replace('/eos/home-n/','/store/user/').replace('/eos/cms/', 'root://cmsxrootd.fnal.gov//') for f in params.files]
+                config.Data.totalUnits = len(params.files)
+                config.Site.whitelist = ['T2_CH_CERN']
+            else:
+                config.Data.inputDBS = 'global'
+                config.Data.inputDataset = params.dataset
+                print(params.dataset)
                 
             config.Data.unitsPerJob = 80
-            config.Data.totalUnits = len(params.files)
             config.Data.outLFNDirBase = params.output_path[params.output_path.index('/store'):]
+            config.Site.storageSite = 'T2_CH_CERN'
+            # config.Site.storageSite = 'T3_CH_CERNBOX'
+            # config.Site.whitelist = ['T3_CH_CERNBOX']
 
             config_values = {
                 'CUT_TEMPLATE'  : f"'{params.preselection}'" if params.preselection is not None else None,
                 'JSON_TEMPLATE' : f"'{os.sep.join(params.json.split(os.sep)[1:])}'" if params.json is not None else None,
+                'BRANCH_TEMPLATE' : f"{params.branchesIn}" if params.branchesIn is not None else None,
             }
 
             with open('crab_skimmer/crab_script_template.py', 'r') as f:
@@ -228,9 +237,12 @@ def main(cfg):
                 else:
                     raise FileExistsError('CRAB request already exists. Try a job with another name.')
 
+            print("DEBUG: crab config = ")
+            print(config)
+
             res = crabCommand('submit', config=config)
-    
             print(f'Submitted job {params.name} to CRAB batch system\n',res)
+
     elif 'serial' in cfg.run_strategy:
         for params in job_configs:
             worker(params)

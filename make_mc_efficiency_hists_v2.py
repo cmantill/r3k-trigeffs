@@ -98,6 +98,33 @@ class MCTriggerEfficiencyProducer(Module):
                         return mom
         return None
 
+    def find_jpsi_electrons(self, electrons, gen_parts):
+        idx1, idx2 = -1, -1
+        for i, el in enumerate(electrons):
+            genpart_idx = el.genPartIdx
+            if genpart_idx < 0:
+                continue
+            gen_ele = gen_parts[genpart_idx]
+            if gen_ele.genPartIdxMother < 0:
+                continue
+            gen_ele_mom = gen_parts[gen_ele.genPartIdxMother]
+            if gen_ele_mom.pdgId == 443:  # J/psi
+                if idx1 == -1:
+                    idx1 = i
+                else:
+                    idx2 = i
+                    break
+            elif abs(gen_ele_mom.pdgId) == 11:
+                # sometimes electrons radiate -- let's just take into account 1 level of radiation
+                gen_ele_grandmom = gen_parts[gen_ele_mom.genPartIdxMother]
+                if gen_ele_grandmom.pdgId == 443:  # J/psi
+                    if idx1 == -1:
+                        idx1 = i
+                    else:
+                        idx2 = i
+                        break
+
+        return idx1, idx2
 
     def make_th1(self, name, xbins):
         h = ROOT.TH1F(name, name, len(xbins)-1, xbins)
@@ -110,6 +137,10 @@ class MCTriggerEfficiencyProducer(Module):
         self.addObject(h)
         return h
 
+    def make_th3(self, name, xbins, ybins, zbins):
+        h = ROOT.TH3F(name, name, len(xbins)-1, xbins, len(ybins)-1, ybins, len(zbins)-1, zbins)
+        self.addObject(h)
+        return h
 
     def fill_th1(self, h, arr, w):
         h.Fill(arr, np.ones_like(arr)*w)
@@ -119,14 +150,21 @@ class MCTriggerEfficiencyProducer(Module):
         shape = np.broadcast_shapes(np.shape(arr_x), np.shape(arr_y))
         h.Fill(arr_x, arr_y, (np.ones_like(shape) if shape else 1)*w)
 
+    def fill_th3(self, h, arr_x, arr_y, arr_z, w):
+        shape = np.broadcast_shapes(np.shape(arr_x), np.shape(arr_y), np.shape(arr_z))
+        h.Fill(arr_x, arr_y, arr_z, (np.ones_like(shape) if shape else 1)*w)
 
     def beginJob(self, histFile=None, histDirName=None):
         Module.beginJob(self, histFile, histDirName)
 
         # Hist Binnings
         self.diel_m_bins = np.linspace(2, 4, 100, dtype=np.double)
-        self.pt_bins     = np.array([5, 8, 999], dtype=np.double)
-        # self.pt_bins     = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
+        # self.pt_bins     = np.array([5, 8, 999], dtype=np.double)
+        # self.pt_bins     = np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
+        self.pt_bins = np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 999], dtype=np.double)
+        self.pt_bins_coarse     = np.array([4, 6, 9, 10, 12, 999], dtype=np.double)
+        # self.pt_bins     = np.array([4, 6.5, 9, 12, 999], dtype=np.double)
+        # self.pt_bins     = np.array([5, 8, 12, 999], dtype=np.double)
         self.dr_bins     = np.array([0, 0.12, 0.2, 0.28, 0.44, 1.], dtype=np.double)
         self.npv_bins    = np.linspace(0, 100, 100, dtype=np.double)
 
@@ -137,6 +175,13 @@ class MCTriggerEfficiencyProducer(Module):
         self.h_diel_m_num_ptbinned_dict      = {i : self.make_th2(f'diel_m_{i}_num_ptbinned', self.diel_m_bins,  self.pt_bins) for i in self.trigger_map.keys()}
         self.h_diel_m_denom_ptbinned_dict    = {i : self.make_th2(f'diel_m_{i}_denom_ptbinned', self.diel_m_bins,  self.pt_bins) for i in self.trigger_map.keys()}
 
+        # deltaR Eff
+        self.h_diel_m_num_drbinned_dict      = {i : self.make_th2(f'diel_m_{i}_num_drbinned', self.diel_m_bins,  self.dr_bins) for i in self.trigger_map.keys()}
+        self.h_diel_m_denom_drbinned_dict    = {i : self.make_th2(f'diel_m_{i}_denom_drbinned', self.diel_m_bins,  self.dr_bins) for i in self.trigger_map.keys()}
+
+        # Pt1, Pt2 Eff
+        self.h_diel_m_num_pt1pt2binned_dict   = {i : self.make_th3(f'diel_m_{i}_num_pt1pt2binned', self.diel_m_bins,  self.pt_bins_coarse, self.pt_bins_coarse) for i in self.trigger_map.keys()}
+        self.h_diel_m_denom_pt1pt2binned_dict = {i : self.make_th3(f'diel_m_{i}_denom_pt1pt2binned', self.diel_m_bins,  self.pt_bins_coarse, self.pt_bins_coarse) for i in self.trigger_map.keys()}
 
     def analyze(self, event):
         # Define Physics Objects
@@ -145,18 +190,25 @@ class MCTriggerEfficiencyProducer(Module):
         trig_HLT  = Object(event, 'HLT')
         pv        = Object(event, 'PV')
 
-
-        # Find B meson & theory weight
+        # # Find B meson & theory weight
         gen_parts = Collection(event, 'GenPart')
-        b_pt = self.get_b_meson(gen_parts).pt
-        w_theory = self.get_fonll_weight(b_pt)
+        # b_pt = self.get_b_meson(gen_parts).pt
+        # w_theory = self.get_fonll_weight(b_pt)
+
+        w_theory = 1
+
+        # idx1, idx2 = self.find_jpsi_electrons(electrons, gen_parts)
+        # # print("DEBUG: jpsi eles idx1, idx2 = ", idx1, idx2)
+
+        # if idx1 == -1 or idx2 == -1:
+        #     return True  # skip event if we can't find a J/psi->ee candidate
 
         # Define Kinematic Variables
-        # lead_el_pt    = electrons[0].pt
+        lead_el_pt    = electrons[0].pt
         sublead_el_pt = electrons[1].pt
         # sublead_eta   = electrons[1].eta
         # sublead_phi   = electrons[1].phi
-        # dr            = electrons[0].DeltaR(electrons[1])
+        dr            = electrons[0].DeltaR(electrons[1])
         # diel_pt       = (electrons[0].p4() + electrons[1].p4()).Pt()
         diel_m        = (electrons[0].p4() + electrons[1].p4()).M()
 
@@ -172,10 +224,40 @@ class MCTriggerEfficiencyProducer(Module):
                 w_theory
             )
 
+            self.fill_th2(
+                self.h_diel_m_denom_drbinned_dict[path],
+                diel_m, 
+                dr,
+                w_theory
+            )
+
+            self.fill_th3(
+                self.h_diel_m_denom_pt1pt2binned_dict[path],
+                diel_m, 
+                lead_el_pt,
+                sublead_el_pt,
+                w_theory
+            )
+
             if trig_bit_dict[path]:
                 self.fill_th2(
                     self.h_diel_m_num_ptbinned_dict[path],
                     diel_m, 
+                    sublead_el_pt,
+                    w_theory
+                )
+
+                self.fill_th2(
+                    self.h_diel_m_num_drbinned_dict[path],
+                    diel_m, 
+                    dr,
+                    w_theory
+                )
+
+                self.fill_th3(
+                    self.h_diel_m_num_pt1pt2binned_dict[path],
+                    diel_m, 
+                    lead_el_pt,
                     sublead_el_pt,
                     w_theory
                 )

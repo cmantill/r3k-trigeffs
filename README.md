@@ -30,6 +30,18 @@ We employ a mixture of L1+HLT trigger paths. Scale Factors are derived by compar
 
 **Note:** Ensure you inspect all `.yml` config files before running to confirm dataset paths, cuts, and trigger lists are correct for your specific study.
 
+
+### X->ee changes
+**General warning**: current version is a WIP.
+
+Few changes to consider with respect to instructions below:
+- To add possibility to run on local CERNBox files, you should appropriately edit `skim_nanoaod.py` (look for `config.Site.storageSite`).
+- For quick checks, you can run the skimming script locally launching `crab_skimmer/test_script.py` (inside, you can edit input files, branches selection).
+- Preliminary support for 2D efficiencies (use e.g. `pt1pt2` as variable in plot .yml).
+- Warning: many of the examples in .yml use local folders. Update accordingly.
+
+`trigger_OR` jsons for both years are attached in `json_files/jay` (taken from [r3k-preselBDT/jsons](https://github.com/DiElectronX/r3k-preselBDT/tree/main/jsons)).
+
 ---
 
 ### Step 1: Skimming

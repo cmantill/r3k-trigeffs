@@ -16,7 +16,7 @@ class ParamSet:
     inputFiles: list[str] = field(default_factory=lambda: inputFiles())
     cut: str = {CUT_TEMPLATE}
     json: str = {JSON_TEMPLATE}
-    branchesIn: str = None
+    branchesIn: list[str] = field(default_factory=lambda: {BRANCH_TEMPLATE})
     branchesOut: str = None
     label: str = '_skim'
     friend: bool = False

@@ -28,13 +28,12 @@ config.JobType.outputFiles = ['output_skim.root']
 
 config.section_('Data')
 #config.Data.inputDataset = ''
-config.Data.userInputFiles = ''
+#config.Data.userInputFiles = ''
 config.Data.splitting = 'FileBased'
 config.Data.unitsPerJob = 1
-config.Data.totalUnits = 63
 config.Data.outLFNDirBase = ''
 config.Data.publication = False
 
 config.section_('Site')
 config.Site.storageSite = 'T2_CH_CERN'
-config.Site.whitelist = ['T2_CH_CERN']
+# config.Site.whitelist = ['T2_CH_CERN']  # Set conditionally in code if needed

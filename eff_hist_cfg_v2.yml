@@ -1,9 +1,23 @@
 global_cfg:
-  run_strategy: serial
+  run_strategy: mp
   #output_dir: ./eff_hists/12_16_25_Incl
   #output_dir: ./eff_hists/12_16_25_xcheck_Incl
   #output_dir: ./eff_hists/12_17_25_Incl
-  output_dir: ./eff_hists/01_26_26_Incl_2023/
+  # output_dir: ./eff_hists/01_26_26_Incl_2023/
+  # output_dir: ./eff_hists/02_17_26_Incl_2023/
+  # output_dir: ./eff_hists/02_18_26_Incl_2023/
+  # output_dir: ./eff_hists/02_23_26_BuToKJpsi_2023/
+  # output_dir: ./eff_hists/02_23_26_BuToKJpsi_2023_lowDisplacement/
+  # output_dir: ./eff_hists/02_23_26_BuToKJpsi_2022_lowDisplacement/
+  output_dir: ./eff_hists/03_02_26_promptJpsi_lowDisplacement_dxyOnly_fixedMC
+  # output_dir: ./eff_hists/03_02_26_promptJpsi_fixedMC
+  # output_dir: ./eff_hists/02_23_26_BuToKJpsi_2022/
+  # output_dir: ./eff_hists/02_23_26_JetMET_2022/
+  # output_dir: ./eff_hists/02_24_26_BuToKJpsi_2023_lowDisplacement/
+  # output_dir: ./eff_hists/02_25_26_2022_newNano/
+  # output_dir: ./eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_2D/
+  # output_dir: ./eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_fineBinning_2D/
+  # output_dir: ./eff_hists/02_25_26_newNano_vsDr/
   theory_weights_file: fonll_weights.json
   test: False
 
@@ -25,20 +39,100 @@ trigger_map:
   L1_4p5_HLT_4p0  : ['DoubleEG4p5_er1p2_dR_Max0p9', 'DoubleEle4_eta1p22_mMax6']
 
 mc_samples:
-  - name: jpsi_resonant_test
-    inputs:
-      - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/output_skim_1.root
-    presel: null
+  # - name: jpsi_resonant_test
+  #   inputs:
+  #     - /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/output_skim_1.root
+  #   presel: null
 
-  - name: jpsi_resonant
-    #inputs: /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/
-    inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/jpsi_resonant_2023/CRAB_UserFiles/crab_jpsi_resonant_12_17_25/251216_230119/0000/
-    presel: null
+  # - name: btokjpsi_2023
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/
+  #   # inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/jpsi_resonant_2023/CRAB_UserFiles/crab_jpsi_resonant_12_17_25/251216_230119/0000/
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/sgottlie/ParkingDoubleMuonLowMassSkims/jpsi_resonant_private/CRAB_UserFiles/crab_jpsi_resonant_01_21_26/260121_140019/0000/
+  #   inputs: 
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_BuToKJpsi_2023BPix/output_skim.root
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_BuToKJpsi_2023preBPix/output_skim.root
+  #   presel: null
+  #   # presel: "abs(Electron_dxy[0]) < 0.01 && abs(Electron_dxy[1]) < 0.01 && abs(Electron_dz[0]) < 0.01 && abs(Electron_dz[1]) < 0.01"
+  #   # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+
+  # - name: btokjpsi_2022
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/
+  #   # inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/jpsi_resonant_2023/CRAB_UserFiles/crab_jpsi_resonant_12_17_25/251216_230119/0000/
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/sgottlie/ParkingDoubleMuonLowMassSkims/jpsi_resonant_private/CRAB_UserFiles/crab_jpsi_resonant_01_21_26/260121_140019/0000/
+  #   inputs: 
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_BuToKJpsi_2022postEE/output_skim.root
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_BuToKJpsi_2022preEE/output_skim.root
+  #   presel: null
+  #   # presel: "abs(Electron_dxy[0]) < 0.01 && abs(Electron_dxy[1]) < 0.01 && abs(Electron_dz[0]) < 0.01 && abs(Electron_dz[1]) < 0.01"
+  #   # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+
+  # - name: btokjpsi
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/jpsi_resonant_final/CRAB_UserFiles/crab_jpsi_resonant_09_30_25/250929_220718/0000/
+  #   # inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/jpsi_resonant_2023/CRAB_UserFiles/crab_jpsi_resonant_12_17_25/251216_230119/0000/
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/sgottlie/ParkingDoubleMuonLowMassSkims/jpsi_resonant_private/CRAB_UserFiles/crab_jpsi_resonant_01_21_26/260121_140019/0000/
+  #   inputs: /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_BuToKJpsi_2022postEE/output_skim.root
+  #   presel: null
+  #   presel: "abs(Electron_dxy[0]) < 0.01 && abs(Electron_dxy[1]) < 0.01 && abs(Electron_dz[0]) < 0.01 && abs(Electron_dz[1]) < 0.01"
+
+  - name: prompt_jpsi_2022
+    inputs: 
+      # - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JPsiToEE_pth10toInf_TuneCP5_13p6TeV_pythia8/crab_prompt_jpsi_2022EE_02_18_26/260218_081714/0000/
+      # - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JPsiToEE_pth10toInf_TuneCP5_13p6TeV_pythia8/crab_prompt_jpsi_2022preEE_02_18_26/260218_081718/0000/
+      - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_promptJpsi_2022postEE/final
+      - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_promptJpsi_2022preEE/final
+    # presel: null
+    # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+    presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && Electron_pt[0] > 5 && Electron_pt[1] > 5"
+
+  - name: prompt_jpsi_2023
+    inputs:
+      # - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JPsiToEE_pth10toInf_TuneCP5_13p6TeV_pythia8/crab_prompt_jpsi_2023BPix_02_18_26/260218_134434/0000/
+      # - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JPsiToEE_pth10toInf_TuneCP5_13p6TeV_pythia8/crab_prompt_jpsi_2023preBPix_02_18_26/260218_134438/0000/
+      - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_promptJpsi_2023preBPix/final
+      - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/skim_promptJpsi_2023BPix/final
+    # presel: null
+    # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+    presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && Electron_pt[0] > 5 && Electron_pt[1] > 5"
 
 data_samples:
   - name: data_trigger_OR
     #inputs: /eos/cms/store/group/phys_bphys/DiElectronX/nzipper/ParkingDoubleMuonLowMassSkims/trigger_OR_v2/CRAB_UserFiles/crab_trigger_OR_09_30_25/250929_220727/0000/
-    #inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2/CRAB_UserFiles/crab_trigger_OR_11_21_25/251121_213555/0000/
-    inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2_2023/CRAB_UserFiles/crab_trigger_OR_2023_12_19_25/251219_202048/0000/
+    inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2/CRAB_UserFiles/crab_trigger_OR_11_21_25/251121_213555/0000/
+    # inputs: /eos/cms/store/group/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_v2_2023/CRAB_UserFiles/crab_trigger_OR_2023_12_19_25/251219_202048/0000/
+    # inputs: /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/CMSSW_14_0_6/src/r3k-trigeffs/crab_skimmer/output/final
+    # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/sgottlie/ParkingDoubleMuonLowMassSkims/2023new/trigger_OR/CRAB_UserFiles/crab_trigger_OR_01_21_26/260121_140128/0000/
     trigger: trigger_OR
-    presel: null
+    # presel: null
+    # presel: "abs(Electron_dxy[0]) < 0.008 && abs(Electron_dxy[1]) < 0.008 && abs(Electron_dz[0]) < 0.008 && abs(Electron_dz[1]) < 0.008"
+    presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2"
+
+  # - name: data_trigger_OR_2022_newNano
+  #   inputs: /eos/cms/store/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_2022_newNano/CRAB_UserFiles/crab_trigger_OR_2022_newNano_02_24_26/260224_135609/0000/
+  #   trigger: trigger_OR
+  #   # presel: null
+  #   # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+  #   presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2"
+
+  # - name: data_trigger_OR_2023_newNano
+  #   inputs: /eos/cms/store/cmst3/group/xee/trigger/ParkingDoubleMuonLowMassSkims/trigger_OR_2023_newNano/CRAB_UserFiles/crab_trigger_OR_2023_newNano_02_24_26/260224_135614/0000
+  #   trigger: trigger_OR
+  #   # presel: null
+  #   # presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2 && abs(Electron_dz[0]/Electron_dzErr[0]) < 2 &&  abs(Electron_dz[1]/Electron_dzErr[1]) < 2"
+  #   presel: "abs(Electron_dxy[0]/Electron_dxyErr[0]) < 2 && abs(Electron_dxy[1]/Electron_dxyErr[1]) < 2"
+
+  # - name: jetMET_2022
+  #   inputs: 
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JetMET/crab_trigger_OR_2022C_JETMET_02_23_26/260223_162217/0000/
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JetMET/crab_trigger_OR_2022D_JETMET_02_23_26/260223_162906/0000/
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JetMET/crab_trigger_OR_2022E_JETMET_02_23_26/260223_162910/0000/
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JetMET/crab_trigger_OR_2022F_JETMET_02_23_26/260223_162913/0000/
+  #     - /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/JetMET/crab_trigger_OR_2022G_JETMET_02_23_26/260223_162917/0000/
+  #   trigger: trigger_OR
+  #   presel: null
+  #   # presel: "abs(Electron_dxy[0]) < 0.008 && abs(Electron_dxy[1]) < 0.008 && abs(Electron_dz[0]) < 0.008 && abs(Electron_dz[1]) < 0.008"
+
+  # - name: data_2022_noMassCut_trigger_OR
+  #   # inputs: /eos/cms/store/group/phys_bphys/DiElectronX/sgottlie/ParkingDoubleMuonLowMassSkims/2023new/trigger_OR/CRAB_UserFiles/crab_trigger_OR_01_21_26/260121_140128/0000/
+  #   inputs: /eos/home-n/npalmeri/DiEleAnalyzer/trigger_sfs/skim_outputs/CRAB_UserFiles/crab_trigger_OR_02_17_26/260217_115236/0000/
+  #   trigger: trigger_OR
+  #   presel: "Electron_mvaNoIso_WPL[0] == 1 && Electron_mvaNoIso_WPL[1] == 1"

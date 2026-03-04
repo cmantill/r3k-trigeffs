@@ -1,18 +1,45 @@
 inputs:
   # for 2022 xcheck
-  data_dir: eff_hists/12_16_25_xcheck_Incl
-  mc_dir: eff_hists/12_16_25_Incl/
+  # data_dir: eff_hists/12_16_25_xcheck_Incl
+  # mc_dir: eff_hists/12_16_25_Incl/
+  # data_dir: eff_hists/02_18_26_Incl_2022/
+  # data_dir: eff_hists/02_23_26_JetMET_2022/
+  # data_dir: eff_hists/02_25_26_newNano_lowDisplacement_2D
+  # data_dir: eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_2D
+  data_dir: eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_fineBinning_2D
+  # data_dir: eff_hists/02_25_26_newNano
+  # data_dir: eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_fixedMC
+  # mc_dir: eff_hists/02_18_26_Incl_2022/
+  # data_dir: eff_hists/02_23_26_BuToKJpsi_2022_lowDisplacement
+  # mc_dir: eff_hists/02_23_26_JetMET_2022/
+  # mc_dir: eff_hists/02_25_26_newNano_lowDisplacement_2D
+  # mc_dir: eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_2D
+  # mc_dir: eff_hists/02_25_26_newNano_lowDisplacement_dxyOnly_fineBinning_2D
+  # mc_dir: eff_hists/02_23_26_BuToKJpsi_2022_lowDisplacement
+  mc_dir: eff_hists/03_02_26_promptJpsi_lowDisplacement_dxyOnly_fixedMC
+  # mc_dir: eff_hists/03_02_26_promptJpsi_fixedMC
   hist_dir: hists/
 
 output:
-  output_dir: eff_plots_v2/01_26_26_Incl_2022/
+  # output_dir: eff_plots_v2/01_26_26_Incl_2022/
+  # output_dir: eff_plots_v2/02_18_26_Incl_2022/
+  # output_dir: eff_plots_v2/02_23_26_JetMET_2022/
+  # output_dir: eff_plots_v2/02_25_26_newNano_promptJpsi_lowDisplacement_2022/
+  # output_dir: eff_plots_v2/02_25_26_newNano_promptJpsi_lowDisplacement_dxyOnly_fineBinning_2D_2022/
+  output_dir: eff_plots_v2/03_02_26_newNano_promptJpsi_lowDisplacement_dxyOnly_fixedMC_2022/
+  # output_dir: eff_plots_v2/03_02_26_newNano_promptJpsi_fixedMC_2022/
+  # output_dir: eff_plots_v2/02_23_26_BuToKJpsi_2022_lowDisplacement/
 
 plots:
   trigger_OR:
     files:
-      data: effs_data_trigger_OR.root
-      mc: effs_jpsi_resonant.root
-    variables: [pt]
+      # data: effs_data_trigger_OR.root
+      # data: effs_jetMET_2022.root
+      data: effs_data_trigger_OR_2022_newNano.root
+      # mc: effs_prompt_jpsi.root
+      mc: effs_prompt_jpsi_2022.root
+      # mc: effs_btokjpsi.root
+    variables: [pt,dr,pt1pt2]
     triggers: 
       data_trigger: trigger_OR
     mc_triggers:
